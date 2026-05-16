@@ -73,9 +73,9 @@ export default function CycleWindowsModal({ onClose, cycleId, cycleName }: Cycle
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+    <div className="modal-backdrop">
+      <div className="modal-panel max-w-3xl flex flex-col">
+        <div className="modal-header">
           <div>
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-brand-600" />
@@ -88,7 +88,7 @@ export default function CycleWindowsModal({ onClose, cycleId, cycleName }: Cycle
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="modal-body flex-1 overflow-y-auto space-y-6">
           {error && <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm">{error}</div>}
           {loading ? (
             <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>
@@ -102,14 +102,14 @@ export default function CycleWindowsModal({ onClose, cycleId, cycleName }: Cycle
                       <p className="font-semibold text-slate-800">{t.label}</p>
                     </div>
                     <div className="flex-1 min-w-[200px]">
-                      <label className="text-xs text-slate-500 block mb-1">Opens At</label>
+                      <label className="label block mb-1">Opens At</label>
                       <input type="datetime-local" value={win.opens_at} onChange={e => updateWindow(t.id, 'opens_at', e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-brand-500" />
+                        className="input" />
                     </div>
                     <div className="flex-1 min-w-[200px]">
-                      <label className="text-xs text-slate-500 block mb-1">Closes At</label>
+                      <label className="label block mb-1">Closes At</label>
                       <input type="datetime-local" value={win.closes_at} onChange={e => updateWindow(t.id, 'closes_at', e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-brand-500" />
+                        className="input" />
                     </div>
                     <div className="w-24">
                       <label className="flex items-center gap-2 cursor-pointer mt-5">
@@ -120,7 +120,7 @@ export default function CycleWindowsModal({ onClose, cycleId, cycleName }: Cycle
                     </div>
                     <div className="mt-5">
                       <button onClick={() => handleSave(t.id)} disabled={saving}
-                        className="px-4 py-1.5 bg-brand-50 text-brand-700 hover:bg-brand-100 font-semibold rounded-lg text-sm transition-colors">
+                        className="btn btn-outline">
                         Save
                       </button>
                     </div>

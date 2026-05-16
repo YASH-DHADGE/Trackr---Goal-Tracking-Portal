@@ -84,10 +84,10 @@ export default function SharedGoalModal({ onClose, onSuccess, cycleId }: SharedG
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="modal-backdrop">
+      <div className="modal-panel max-w-2xl flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="modal-header">
           <div>
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
               <Target className="w-5 h-5 text-brand-600" />
@@ -116,7 +116,7 @@ export default function SharedGoalModal({ onClose, onSuccess, cycleId }: SharedG
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="modal-body flex-1 overflow-y-auto">
           {error && (
             <div className="mb-6 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-center gap-2">
               <Info className="w-4 h-4 flex-shrink-0" />
@@ -128,44 +128,44 @@ export default function SharedGoalModal({ onClose, onSuccess, cycleId }: SharedG
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Thrust Area</label>
+                  <label className="label mb-1.5 block">Thrust Area</label>
                   <select 
                     value={form.thrust_area}
                     onChange={e => setForm({...form, thrust_area: e.target.value})}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-shadow"
+                    className="select"
                   >
                     {thrustAreas.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 
                 <div className="col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Goal Title *</label>
+                  <label className="label mb-1.5 block">Goal Title *</label>
                   <input 
                     required
                     value={form.title}
                     onChange={e => setForm({...form, title: e.target.value})}
                     placeholder="e.g., Increase department efficiency"
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-shadow"
+                    className="input"
                   />
                 </div>
 
                 <div className="col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Description</label>
+                  <label className="label mb-1.5 block">Description</label>
                   <textarea 
                     value={form.description}
                     onChange={e => setForm({...form, description: e.target.value})}
                     rows={2}
                     placeholder="Provide more context..."
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-shadow resize-none"
+                    className="textarea"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Unit of Measure</label>
+                  <label className="label mb-1.5 block">Unit of Measure</label>
                   <select 
                     value={form.uom_type}
                     onChange={e => setForm({...form, uom_type: e.target.value})}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-shadow"
+                    className="select"
                   >
                     <option value="min_numeric">Min Numeric (Higher is Better)</option>
                     <option value="max_numeric">Max Numeric (Lower is Better)</option>
@@ -175,26 +175,26 @@ export default function SharedGoalModal({ onClose, onSuccess, cycleId }: SharedG
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">
+                  <label className="label mb-1.5 block">
                     {form.uom_type === 'timeline' ? 'Deadline' : 'Target Value'}
                   </label>
                   {form.uom_type === 'timeline' ? (
                     <input type="date" value={form.master_deadline_date} onChange={e => setForm({...form, master_deadline_date: e.target.value})}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-shadow" />
+                      className="input" />
                   ) : form.uom_type === 'zero_based' ? (
-                    <input disabled value="0" className="w-full border border-slate-100 bg-slate-50 rounded-xl px-4 py-2.5 text-sm text-slate-400" />
+                    <input disabled value="0" className="input bg-slate-50 text-slate-400" />
                   ) : (
                     <input type="number" value={form.master_target_numeric} onChange={e => setForm({...form, master_target_numeric: e.target.value})}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-shadow" />
+                      className="input" />
                   )}
                 </div>
 
                 <div className="col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Primary Owner * (Achievement updates from this user will sync to all)</label>
+                  <label className="label mb-1.5 block">Primary Owner * (Achievement updates from this user will sync to all)</label>
                   <select 
                     value={form.primary_owner_id}
                     onChange={e => setForm({...form, primary_owner_id: e.target.value})}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-shadow"
+                    className="select"
                   >
                     <option value="">Select Primary Owner</option>
                     {users.map(u => <option key={u.id} value={u.id}>{u.full_name} ({u.role})</option>)}
@@ -244,11 +244,11 @@ export default function SharedGoalModal({ onClose, onSuccess, cycleId }: SharedG
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex gap-4">
+        <div className="modal-footer">
           {step === 2 && (
             <button 
               onClick={() => setStep(1)}
-              className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-bold hover:bg-white transition-colors text-sm"
+              className="btn btn-outline flex-1"
             >
               Back
             </button>
@@ -256,7 +256,7 @@ export default function SharedGoalModal({ onClose, onSuccess, cycleId }: SharedG
           <button 
             onClick={step === 1 ? () => setStep(2) : handleSubmit}
             disabled={loading}
-            className="flex-[2] py-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white rounded-xl font-bold transition-all shadow-lg shadow-brand-200 flex items-center justify-center gap-2"
+            className="btn btn-primary flex-[2] shadow-lg shadow-brand-200"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : step === 1 ? 'Next: Select Assignees' : 'Create & Assign Goal'}
           </button>

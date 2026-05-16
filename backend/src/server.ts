@@ -7,18 +7,23 @@ dotenv.config();
 
 const PORT = process.env.PORT || 3001;
 
-// Start server if not running as a serverless function
-if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV !== 'production') {
+// Only avoid app.listen if we are explicitly in a Vercel/Serverless environment
+// that handles the entry point itself.
+const isServerless = process.env.VERCEL === '1';
+
+if (!isServerless) {
   app.listen(PORT, async () => {
     try {
+      console.log('🚀 Checking for database migrations...');
       await runMigrations();
+      
       const client = await pool.connect();
       console.log('✅ Database connected successfully');
       client.release();
     } catch (err) {
-      console.error('❌ Database connection error:', err);
+      console.error('❌ Startup error:', err);
     }
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`📡 Server is running on port ${PORT}`);
   });
 }
 

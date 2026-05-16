@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Users, CheckCircle, Clock, Search, ChevronRight, Loader2, X, Download, BarChart2 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Users, CheckCircle, Clock, Search, Loader2, X, Download } from 'lucide-react';
 import apiClient from '../../api/client';
 import ManagerCheckinView from './ManagerCheckinView';
 import PlannedVsActualTable from '../../components/PlannedVsActualTable';
+import SkeletonLoader from '../../components/SkeletonLoader';
 
 interface Cycle { id: string; name: string; status: string; }
 interface TeamSheet {
@@ -41,6 +43,19 @@ const ManagerDashboard = () => {
   const [reworkNote, setReworkNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && ['goal_setting', 'q1', 'q2', 'q3', 'q4', 'planned_vs_actual'].includes(t)) {
+      setActiveTab(t as any);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (t: string) => {
+    setActiveTab(t as any);
+    setSearchParams({ tab: t });
+  };
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -48,8 +63,10 @@ const ManagerDashboard = () => {
     apiClient.get('/cycles')
       .then(r => {
         const all: Cycle[] = r.data;
-        setCycles(all);
-        const active = all.find(c => c.status === 'active') || all[0] || null;
+        const seen = new Set<string>();
+        const deduped = all.filter(c => seen.has(c.name) ? false : (seen.add(c.name), true));
+        setCycles(deduped);
+        const active = deduped.find(c => c.status === 'active') || deduped[0] || null;
         setActiveCycle(active);
       })
       .catch(() => setError('Could not load cycles.'))
@@ -128,18 +145,18 @@ const ManagerDashboard = () => {
   const downloadAchievementReport = async () => {
     if (!activeCycle) return;
     try {
-      const response = await apiClient.get(`/admin/reports/achievement/export?cycleId=${activeCycle.id}`, {
+      const response = await apiClient.get(`/goal-sheets/team/${activeCycle.id}/export`, {
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `achievement_report.csv`);
+      link.setAttribute('download', `team_goals_export_${activeCycle.id}.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
     } catch (e: any) {
-      alert('Failed to download report');
+      setError('Export failed. Please try again or contact your admin.');
     }
   };
 
@@ -148,8 +165,14 @@ const ManagerDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      <div className="space-y-6">
+        <div className="h-20 bg-white rounded-2xl animate-pulse"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <SkeletonLoader.Card />
+          <SkeletonLoader.Card />
+          <SkeletonLoader.Card />
+        </div>
+        <SkeletonLoader.Table rows={6} />
       </div>
     );
   }
@@ -164,18 +187,24 @@ const ManagerDashboard = () => {
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Team Dashboard</h2>
-          <p className="text-slate-500 mt-1">
-            Welcome, <span className="font-medium text-slate-700">{user.full_name || 'Manager'}</span>
-            {activeCycle && <span className="text-slate-400"> · {activeCycle.name}</span>}
+      <div className="card p-8 flex justify-between items-center relative overflow-hidden flex-wrap gap-6 animate-fade-in">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+        <div className="relative z-10">
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Team Dashboard</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-2">
+            Welcome, <span className="font-bold text-slate-800 dark:text-slate-200">{user.full_name || 'Manager'}</span>
+            {activeCycle && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                <span className="text-brand-600 dark:text-brand-400 font-bold">{activeCycle.name}</span>
+              </>
+            )}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative z-10">
           {cycles.length > 1 && (
             <select
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+              className="select w-40"
               value={activeCycle?.id || ''}
               onChange={e => { setActiveCycle(cycles.find(c => c.id === e.target.value) || null); setActiveTab('goal_setting'); }}
             >
@@ -185,7 +214,7 @@ const ManagerDashboard = () => {
           {activeCycle && (
             <button 
               onClick={downloadAchievementReport}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="btn btn-primary"
             >
               <Download className="w-4 h-4" /> Export
             </button>
@@ -193,7 +222,7 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      <div className="flex gap-2 p-1 bg-white border border-slate-100 rounded-xl w-fit shadow-sm overflow-x-auto max-w-full">
+      <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl w-fit animate-fade-in" style={{ animationDelay: '0.1s' }}>
         {[
           { id: 'goal_setting', label: 'Goal Approvals' },
           { id: 'q1', label: 'Q1 Check-ins' },
@@ -202,8 +231,12 @@ const ManagerDashboard = () => {
           { id: 'q4', label: 'Q4 Check-ins' },
           { id: 'planned_vs_actual', label: 'Planned vs Actual' },
         ].map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id as any)}
-            className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+          <button key={t.id} onClick={() => handleTabChange(t.id)}
+            className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+              activeTab === t.id 
+                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700' 
+                : 'text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+            }`}>
             {t.label}
           </button>
         ))}
@@ -216,39 +249,39 @@ const ManagerDashboard = () => {
       ) : (
         <>
           {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600"><Users className="w-8 h-8" /></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div className="stat-card">
+          <div className="bg-indigo-50 dark:bg-indigo-500/10 stat-icon text-indigo-600 dark:text-indigo-400"><Users className="w-8 h-8" /></div>
           <div>
-            <p className="text-sm font-medium text-slate-500">Direct Reports</p>
-            <p className="text-2xl font-bold text-slate-800">{team.length}</p>
+            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Direct Reports</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{team.length}</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600"><CheckCircle className="w-8 h-8" /></div>
+        <div className="stat-card">
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 stat-icon text-emerald-600 dark:text-emerald-400"><CheckCircle className="w-8 h-8" /></div>
           <div>
-            <p className="text-sm font-medium text-slate-500">Goals Approved</p>
-            <p className="text-2xl font-bold text-slate-800">{approved} / {team.length}</p>
+            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Goals Approved</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{approved} <span className="text-slate-400 font-medium">/ {team.length}</span></p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="bg-amber-50 p-3 rounded-xl text-amber-600"><Clock className="w-8 h-8" /></div>
+        <div className="stat-card">
+          <div className="bg-amber-50 dark:bg-amber-500/10 stat-icon text-amber-600 dark:text-amber-400"><Clock className="w-8 h-8" /></div>
           <div>
-            <p className="text-sm font-medium text-slate-500">Pending Review</p>
-            <p className="text-2xl font-bold text-slate-800">{pending}</p>
+            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Pending Review</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{pending}</p>
           </div>
         </div>
       </div>
 
       {/* Team table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center flex-wrap gap-4">
-          <h3 className="text-lg font-bold text-slate-800">Team Goal Sheets</h3>
+      <div className="card overflow-hidden animate-fade-in" style={{ animationDelay: '0.3s' }}>
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex justify-between items-center flex-wrap gap-4">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Team Goal Sheets</h3>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text" placeholder="Search team member..."
-              className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              className="input pl-10 w-64"
               value={search} onChange={e => setSearch(e.target.value)}
             />
           </div>
@@ -262,44 +295,46 @@ const ManagerDashboard = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Employee</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Goal Status</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Submitted</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Action</th>
+              <thead>
+                <tr className="table-head">
+                  <th className="px-6 py-4">Employee</th>
+                  <th className="px-6 py-4">Goal Status</th>
+                  <th className="px-6 py-4">Submitted</th>
+                  <th className="px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filtered.map(member => (
-                  <tr key={member.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={member.id} className="table-row">
                     <td className="px-6 py-4">
-                      <p className="font-medium text-slate-800">{member.employee_name}</p>
-                      <p className="text-sm text-slate-500">{member.employee_email}</p>
+                      <p className="font-bold text-slate-900 dark:text-white">{member.employee_name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{member.employee_email}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[member.status] || 'bg-slate-100 text-slate-600'}`}>
-                        {member.status.replace('_', ' ').toUpperCase()}
+                      <span className={`badge ${
+                        member.status === 'approved' ? 'badge-success' :
+                        member.status === 'submitted' ? 'badge-info' :
+                        member.status === 'rework_requested' ? 'badge-warning' :
+                        'badge-neutral'
+                      }`}>
+                        {member.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {member.submitted_at ? new Date(member.submitted_at).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {member.status === 'submitted' ? (
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            onClick={() => handleReview(member)}
-                            className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700 px-3 py-1.5 rounded-lg hover:bg-brand-50 transition-colors"
-                          >
-                            <Search className="w-4 h-4" /> Review
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center text-sm font-medium text-slate-400">
-                          <ChevronRight className="w-4 h-4 ml-1" />
-                        </span>
-                      )}
+                      <button
+                        onClick={() => handleReview(member)}
+                        className={`inline-flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                          member.status === 'submitted'
+                            ? 'text-brand-600 hover:text-brand-700 hover:bg-brand-50'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Search className="w-4 h-4" />
+                        {member.status === 'submitted' ? 'Review' : 'View'}
+                      </button>
                     </td>
                   </tr>
                 ))}

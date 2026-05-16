@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, FileText, Database, Users, Plus, Loader2, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Calendar, FileText, Database, Users, Plus, Loader2, X, ToggleLeft, ToggleRight, TrendingUp } from 'lucide-react';
 import apiClient from '../../api/client';
 import AdminReportsView from './AdminReportsView';
 import AdminLogsView from './AdminLogsView';
@@ -123,11 +123,14 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-start flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Admin Control Panel</h2>
-          <p className="text-slate-500 mt-1">
-            Welcome, <span className="font-medium text-slate-700">{loggedInUser.full_name || 'Admin'}</span> · Manage users, cycles, and system settings.
+      <div className="card p-8 flex justify-between items-start flex-wrap gap-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+        <div className="relative z-10">
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Admin Control Panel</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-2">
+            Welcome, <span className="font-bold text-slate-800 dark:text-slate-200">{loggedInUser.full_name || 'Admin'}</span> 
+            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+            Manage users, cycles, and system settings.
           </p>
         </div>
       </div>
@@ -140,51 +143,54 @@ const AdminDashboard = () => {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { icon: <TrendingUp className="w-8 h-8" />, label: 'Analytics', desc: 'Advanced performance insights', color: 'bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white', action: () => setTab('analytics') },
-          { icon: <Calendar className="w-8 h-8" />, label: 'Review Cycles', desc: 'Create & manage FY cycles', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white', action: () => setTab('cycles') },
-          { icon: <Users className="w-8 h-8" />, label: 'User Management', desc: 'Manage roles & access', color: 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white', action: () => setTab('users') },
-          { icon: <FileText className="w-8 h-8" />, label: 'Reports', desc: 'View completion reports', color: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white', action: () => setTab('reports') },
-          { icon: <Target className="w-8 h-8" />, label: 'Shared Goals', desc: 'Manage strategic KPIs', color: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white', action: () => setTab('shared_goals') },
+          { icon: <TrendingUp className="w-8 h-8" />, label: 'Analytics', desc: 'Performance insights', color: 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 group-hover:bg-brand-600 group-hover:text-white', action: () => setTab('analytics') },
+          { icon: <Calendar className="w-8 h-8" />, label: 'Review Cycles', desc: 'Manage FY cycles', color: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white', action: () => setTab('cycles') },
+          { icon: <Users className="w-8 h-8" />, label: 'User Management', desc: 'Roles & access', color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white', action: () => setTab('users') },
+          { icon: <FileText className="w-8 h-8" />, label: 'Reports', desc: 'Completion reports', color: 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white', action: () => setTab('reports') },
+          { icon: <Target className="w-8 h-8" />, label: 'Shared Goals', desc: 'Strategic KPIs', color: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white', action: () => setTab('shared_goals') },
         ].map(item => (
           <div key={item.label}
             onClick={item.action}
-            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer group">
-            <div className={`${item.color} p-4 rounded-xl w-16 h-16 flex items-center justify-center mb-4 transition-colors`}>
+            className="card p-6 flex flex-col gap-3 cursor-pointer group hover:translate-y-[-2px] animate-fade-in">
+            <div className={`${item.color} w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300`}>
               {item.icon}
             </div>
-            <h3 className="text-lg font-bold text-slate-800">{item.label}</h3>
-            <p className="text-sm text-slate-500 mt-1">{item.desc}</p>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">{item.label}</h3>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{item.desc}</p>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="border-b border-slate-100 flex flex-wrap">
+      <div className="card overflow-hidden animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <div className="border-b border-slate-100 dark:border-slate-800 flex flex-wrap bg-slate-50/50 dark:bg-slate-900/40">
           {(['analytics', 'users', 'cycles', 'reports', 'logs', 'shared_goals'] as const).map(t => (
             <button key={t}
               onClick={() => setTab(t as any)}
-              className={`px-6 py-4 text-sm font-semibold capitalize transition-colors ${tab === t ? 'text-brand-600 border-b-2 border-brand-600 bg-brand-50/50' : 'text-slate-500 hover:text-slate-700'}`}>
-              {t === 'analytics' ? <><TrendingUp className="w-4 h-4 inline mr-1.5" />Analytics</> :
-               t === 'users' ? <><Users className="w-4 h-4 inline mr-1.5" />Users</> : 
-               t === 'cycles' ? <><Calendar className="w-4 h-4 inline mr-1.5" />Cycles</> :
-               t === 'reports' ? <><FileText className="w-4 h-4 inline mr-1.5" />Reports</> :
-               t === 'shared_goals' ? <><Target className="w-4 h-4 inline mr-1.5" />Shared Goals</> :
-               <><Database className="w-4 h-4 inline mr-1.5" />Logs</>}
+              className={`px-6 py-4 text-xs font-bold uppercase tracking-widest transition-all ${tab === t ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-600 dark:border-brand-400 bg-white dark:bg-slate-900/60' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+              <div className="flex items-center gap-2">
+                {t === 'analytics' ? <TrendingUp className="w-4 h-4" /> :
+                 t === 'users' ? <Users className="w-4 h-4" /> : 
+                 t === 'cycles' ? <Calendar className="w-4 h-4" /> :
+                 t === 'reports' ? <FileText className="w-4 h-4" /> :
+                 t === 'shared_goals' ? <Target className="w-4 h-4" /> :
+                 <Database className="w-4 h-4" />}
+                {t.replace('_', ' ')}
+              </div>
             </button>
           ))}
           {tab === 'users' && (
             <div className="ml-auto flex items-center gap-2 mr-4 my-2">
-              <button onClick={() => setUserView('list')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${userView === 'list' ? 'bg-brand-100 text-brand-700' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>List View</button>
-              <button onClick={() => setUserView('tree')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${userView === 'tree' ? 'bg-brand-100 text-brand-700' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>Hierarchy Tree</button>
+              <button onClick={() => setUserView('list')} className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${userView === 'list' ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>List</button>
+              <button onClick={() => setUserView('tree')} className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${userView === 'tree' ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>Hierarchy</button>
             </div>
           )}
           {tab === 'cycles' && (
             <button
               onClick={() => setShowAddCycle(true)}
-              className="ml-auto mr-4 my-2 flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="ml-auto mr-4 my-2 btn btn-primary"
             >
               <Plus className="w-4 h-4" /> New Cycle
             </button>
@@ -212,35 +218,34 @@ const AdminDashboard = () => {
               <p>No users found.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 border-b border-slate-100">
-                  <tr>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">User</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Code</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Role</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Manager</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Toggle</th>
+            <table className="w-full text-left">
+                <thead>
+                  <tr className="table-head">
+                    <th className="px-6 py-4">User</th>
+                    <th className="px-6 py-4">Code</th>
+                    <th className="px-6 py-4">Role</th>
+                    <th className="px-6 py-4">Manager</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {users.map(u => (
-                    <tr key={u.id} className={`hover:bg-slate-50 transition-colors ${!u.is_active ? 'opacity-50' : ''}`}>
+                    <tr key={u.id} className={`table-row ${!u.is_active ? 'opacity-50' : ''}`}>
                       <td className="px-6 py-4">
-                        <p className="font-medium text-slate-800">{u.full_name}</p>
-                        <p className="text-sm text-slate-500">{u.email}</p>
-                        {u.designation && <p className="text-xs text-slate-400">{u.designation}</p>}
+                        <p className="font-bold text-slate-900 dark:text-white">{u.full_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
+                        {u.designation && <p className="text-[10px] text-brand-600 dark:text-brand-400 font-bold uppercase mt-1">{u.designation}</p>}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 font-mono">{u.employee_code}</td>
+                      <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 font-mono">{u.employee_code}</td>
                       <td className="px-6 py-4">
                         {u.id === loggedInUser.id ? (
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${roleColors[u.role]}`}>{u.role}</span>
+                          <span className="badge badge-neutral">{u.role}</span>
                         ) : (
                           <select
                             value={u.role}
                             onChange={e => changeRole(u.id, e.target.value)}
-                            className={`px-2 py-1 rounded-lg text-xs font-medium border-0 outline-none cursor-pointer ${roleColors[u.role]}`}
+                            className="bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase px-2 py-1 rounded-lg outline-none cursor-pointer border-0"
                           >
                             <option value="employee">employee</option>
                             <option value="manager">manager</option>
@@ -252,7 +257,7 @@ const AdminDashboard = () => {
                         <select
                           value={u.manager_id || ''}
                           onChange={e => changeManager(u.id, e.target.value)}
-                          className="px-2 py-1.5 rounded-lg text-xs font-medium border border-slate-200 outline-none cursor-pointer w-full max-w-[150px]"
+                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs rounded-lg px-2 py-1.5 outline-none cursor-pointer w-full max-w-[150px]"
                         >
                           <option value="">No Manager</option>
                           {users.filter(m => (m.role === 'manager' || m.role === 'admin') && m.id !== u.id).map(m => (
@@ -261,14 +266,14 @@ const AdminDashboard = () => {
                         </select>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${u.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`badge ${u.is_active ? 'badge-success' : 'badge-danger'}`}>
                           {u.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         {u.id !== loggedInUser.id && (
-                          <button onClick={() => toggleUser(u.id)} className="text-slate-400 hover:text-slate-700 transition-colors">
-                            {u.is_active ? <ToggleRight className="w-6 h-6 text-emerald-500" /> : <ToggleLeft className="w-6 h-6" />}
+                          <button onClick={() => toggleUser(u.id)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                            {u.is_active ? <ToggleRight className="w-6 h-6 text-emerald-500" /> : <ToggleLeft className="w-6 h-6 text-slate-400" />}
                           </button>
                         )}
                       </td>
@@ -276,7 +281,6 @@ const AdminDashboard = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
           )
         ) : (
           cycles.length === 0 ? (

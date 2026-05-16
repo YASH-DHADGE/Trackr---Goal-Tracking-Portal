@@ -184,7 +184,7 @@ export default function ManagerCheckinView({ cycleId, quarter }: { cycleId: stri
             <div className="p-6 border-t border-slate-100 shrink-0 bg-white">
               {reviewData?.checkin.manager_status !== 'completed' ? (
                 <>
-                  <label className="text-sm font-medium text-slate-700 block mb-2 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Manager Comments</label>
+                  <label className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Manager Comments</label>
                   <textarea rows={3} value={comment} onChange={e => setComment(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none resize-none mb-4" placeholder="Add your feedback and discussion notes here..." />
                   <div className="flex justify-end gap-3">
                     <button onClick={() => setReviewingId(null)} className="px-5 py-2.5 rounded-xl font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>

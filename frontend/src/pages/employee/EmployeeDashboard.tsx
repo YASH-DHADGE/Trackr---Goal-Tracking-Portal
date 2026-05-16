@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Target, CheckCircle2, Clock, AlertCircle, Loader2, X } from 'lucide-react';
+import { Plus, Target, CheckCircle2, Clock, AlertCircle, Loader2, X, Users } from 'lucide-react';
 import apiClient from '../../api/client';
 import CheckinView from './CheckinView';
+import GoalProgressBar from '../../components/GoalProgressBar';
+import SkeletonLoader from '../../components/SkeletonLoader';
 
 interface Cycle { id: string; name: string; status: string; }
 interface GoalSheet { id: string; status: string; submitted_at: string | null; rework_note?: string; }
@@ -14,11 +16,11 @@ interface Goal {
 }
 
 const statusColors: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-600',
-  submitted: 'bg-blue-100 text-blue-700',
-  rework_requested: 'bg-amber-100 text-amber-700',
-  approved: 'bg-emerald-100 text-emerald-700',
-  locked: 'bg-purple-100 text-purple-700',
+  draft: 'badge badge-neutral',
+  submitted: 'badge badge-info',
+  rework_requested: 'badge badge-warning',
+  approved: 'badge badge-success',
+  locked: 'badge badge-info',
 };
 
 const EmployeeDashboard = () => {
@@ -35,6 +37,7 @@ const EmployeeDashboard = () => {
   const [sheet, setSheet] = useState<GoalSheet | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [managerName, setManagerName] = useState<string | null>(null);
   const [sheetCreating, setSheetCreating] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [activeTab, setActiveTab] = useState<'sheet' | 'q1' | 'q2' | 'q3' | 'q4'>('sheet');
@@ -48,13 +51,19 @@ const EmployeeDashboard = () => {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+  useEffect(() => {
+    apiClient.get('/auth/me').then(r => setManagerName(r.data.manager_name)).catch(() => {});
+  }, []);
+
   // Load cycles on mount
   useEffect(() => {
     apiClient.get('/cycles')
       .then(r => {
         const all: Cycle[] = r.data;
-        setCycles(all);
-        const active = all.find(c => c.status === 'active') || all[0] || null;
+        const seen = new Set<string>();
+        const deduped = all.filter(c => seen.has(c.name) ? false : (seen.add(c.name), true));
+        setCycles(deduped);
+        const active = deduped.find(c => c.status === 'active') || deduped[0] || null;
         setActiveCycle(active);
       })
       .catch(() => setError('Could not load review cycles.'))
@@ -156,8 +165,14 @@ const EmployeeDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      <div className="space-y-6">
+        <div className="h-20 bg-white dark:bg-slate-800 rounded-2xl animate-pulse"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <SkeletonLoader.Card />
+          <SkeletonLoader.Card />
+          <SkeletonLoader.Card />
+        </div>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl h-64 animate-pulse border border-slate-100 dark:border-slate-700/50 shadow-sm"></div>
       </div>
     );
   }
@@ -167,22 +182,31 @@ const EmployeeDashboard = () => {
       {error && (
         <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex justify-between">
           {error}
-          <button onClick={() => setError('')}><X className="w-4 h-4" /></button>
+          <button onClick={() => setError('')} className="btn btn-ghost p-1">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">My Goal Sheet</h2>
-          <p className="text-slate-500 mt-1">
-            Welcome, <span className="font-medium text-slate-700">{user.full_name || 'Employee'}</span>
+      <div className="card p-8 flex justify-between items-center relative overflow-hidden flex-wrap gap-6 animate-fade-in">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+        <div className="relative z-10">
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">My Goal Sheet</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-2 flex-wrap">
+            Welcome, <span className="font-bold text-slate-800 dark:text-slate-200">{user.full_name || 'Employee'}</span>
+            {managerName && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                <span>Reporting to: <span className="font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">{managerName}</span></span>
+              </>
+            )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative z-10">
           {cycles.length > 1 && (
             <select
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+              className="select w-40"
               value={activeCycle?.id || ''}
               onChange={e => { setActiveCycle(cycles.find(c => c.id === e.target.value) || null); setActiveTab('sheet'); }}
             >
@@ -192,28 +216,41 @@ const EmployeeDashboard = () => {
           {!sheet && activeCycle && (
             <button
               onClick={createSheet} disabled={sheetCreating}
-              className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="btn btn-primary"
             >
-              <Plus className="w-4 h-4" /> Start Goal Sheet
+              <Plus className="w-4 h-4" /> Start Sheet
             </button>
           )}
         </div>
       </div>
 
       {sheet && (sheet.status === 'approved' || sheet.status === 'locked') && (
-        <div className="flex gap-2 p-1 bg-white border border-slate-100 rounded-xl w-fit shadow-sm">
+        <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl w-fit animate-fade-in" style={{ animationDelay: '0.1s' }}>
           {[
             { id: 'sheet', label: 'Goal Sheet' },
             { id: 'q1', label: 'Q1 Check-in' },
             { id: 'q2', label: 'Q2 Check-in' },
             { id: 'q3', label: 'Q3 Check-in' },
             { id: 'q4', label: 'Q4 Check-in' },
-          ].map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
-              {t.label}
-            </button>
-          ))}
+          ].map(t => {
+            const isActiveWindow = windows.find(w => w.window_type === t.id)?.is_active;
+            return (
+              <button key={t.id} onClick={() => setActiveTab(t.id as any)}
+                className={`relative px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                  activeTab === t.id 
+                    ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700' 
+                    : 'text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                }`}>
+                {t.label}
+                {isActiveWindow && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500"></span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -224,51 +261,57 @@ const EmployeeDashboard = () => {
           {/* Status Alert */}
           <div className="flex gap-2">
             {sheet && (
-              <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColors[sheet.status] || 'bg-slate-100 text-slate-600'}`}>
+              <span className={statusColors[sheet.status] || 'badge badge-neutral'}>
                 {sheet.status.replace('_', ' ').toUpperCase()}
               </span>
             )}
             {!isGoalSettingOpen && (
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+              <span className="badge badge-danger">
                 GOAL SETTING CLOSED
               </span>
             )}
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className="bg-blue-50 p-3 rounded-xl text-blue-600"><Target className="w-8 h-8" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="stat-card">
+              <div className="stat-icon bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"><Target className="w-8 h-8" /></div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Total Goals</p>
-                <p className="text-2xl font-bold text-slate-800">{goals.length}</p>
+                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Total Goals</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{goals.length}</p>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className={`p-3 rounded-xl ${totalWeightage === 100 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+            <div className="stat-card">
+              <div className={`stat-icon ${totalWeightage === 100 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>
                 <Clock className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Total Weightage</p>
-                <p className={`text-2xl font-bold ${totalWeightage === 100 ? 'text-emerald-600' : 'text-slate-800'}`}>{totalWeightage}%</p>
+                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Total Weightage</p>
+                <p className={`text-2xl font-bold ${totalWeightage === 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>{totalWeightage}%</p>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600"><CheckCircle2 className="w-8 h-8" /></div>
+            <div className="stat-card">
+              <div className="stat-icon bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400"><CheckCircle2 className="w-8 h-8" /></div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Sheet Status</p>
-                <p className="text-2xl font-bold text-slate-800 capitalize">
+                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Sheet Status</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white capitalize">
                   {sheet ? sheet.status.replace('_', ' ') : '—'}
                 </p>
               </div>
             </div>
           </div>
 
+          {goals.length > 0 && (
+            <div className="card p-6">
+              <GoalProgressBar goals={goals} />
+            </div>
+          )}
+
           <div className="flex gap-2 flex-wrap">
             {!sheet && activeCycle && (
               <button
                 onClick={createSheet} disabled={sheetCreating || !isGoalSettingOpen}
-                className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm"
+                className="btn btn-primary"
               >
                 {sheetCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 Start Goal Sheet
@@ -278,13 +321,13 @@ const EmployeeDashboard = () => {
               <>
                 <button
                   onClick={() => setShowAddGoal(true)}
-                  className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm"
+                  className="btn btn-outline"
                 >
                   <Plus className="w-4 h-4" /> Add Goal
                 </button>
                 <button
                   onClick={submitSheet} disabled={!canSubmit}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm"
+                  className="btn btn-primary"
                 >
                   Submit
                 </button>
@@ -294,16 +337,16 @@ const EmployeeDashboard = () => {
 
           {/* No cycle / No sheet placeholder */}
           {!activeCycle && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center text-slate-500">
-              <Target className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+            <div className="card p-12 text-center text-slate-500">
+              <Target className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
               <p className="font-medium">No review cycles found.</p>
               <p className="text-sm mt-1">Ask your admin to create a cycle.</p>
             </div>
           )}
 
           {activeCycle && !sheet && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center text-slate-500">
-              <Target className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+            <div className="card p-12 text-center text-slate-500">
+              <Target className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
               <p className="font-medium">No goal sheet yet for {activeCycle.name}.</p>
               <p className="text-sm mt-1">Click "Start Goal Sheet" to begin.</p>
             </div>
@@ -312,30 +355,29 @@ const EmployeeDashboard = () => {
           {/* Rework note */}
           {sheet?.status === 'rework_requested' && sheet.rework_note && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800 text-sm">
-              <strong>Rework Requested:</strong> {sheet.rework_note}
+              <strong className="font-bold">Rework Requested:</strong> {sheet.rework_note}
             </div>
           )}
 
           {/* Goals list */}
           {goals.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800">Current Goals</h3>
+            <div className="card overflow-hidden animate-fade-in" style={{ animationDelay: '0.4s' }}>
+              <div className="card-header bg-slate-50/50 dark:bg-slate-900/40">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Current Goals</h3>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {goals.map(goal => (
-                  <div key={goal.id} className="p-6 hover:bg-slate-50 transition-colors">
-                    <div className="flex justify-between items-start gap-4">
+                  <div key={goal.id} className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                    <div className="flex justify-between items-start gap-6">
                       <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-slate-800">{goal.title}</h4>
-                        <p className="text-xs text-slate-400 mt-0.5">{goal.thrust_area}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <AlertCircle className="w-4 h-4 text-slate-400" />
-                            Weight: <span className="font-medium text-slate-700">{goal.weightage}%</span>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Target className="w-4 h-4 text-slate-400" />
+                        <div className="flex items-center gap-3 mb-2">
+                           <h4 className="text-lg font-bold text-slate-900 dark:text-white">{goal.title}</h4>
+                           <span className="badge badge-neutral">{goal.weightage}%</span>
+                        </div>
+                        <p className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest">{goal.thrust_area}</p>
+                        <div className="flex items-center gap-6 mt-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500 flex-wrap">
+                          <span className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg">
+                            <Target className="w-3.5 h-3.5" />
                             {goal.uom_type === 'timeline'
                               ? `Deadline: ${goal.deadline_date || '—'}`
                               : goal.target_value_numeric
@@ -343,11 +385,11 @@ const EmployeeDashboard = () => {
                                 : goal.target_value_text || '—'}
                           </span>
                           {goal.is_locked && (
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">Locked</span>
+                            <span className="badge badge-info">Locked</span>
                           )}
                           {goal.is_shared && (
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium flex items-center gap-1">
-                              <Users className="w-3 h-3" /> Shared Goal
+                            <span className="badge badge-success flex items-center gap-1.5">
+                              <Users className="w-3 h-3" /> Shared
                             </span>
                           )}
                         </div>
@@ -355,7 +397,7 @@ const EmployeeDashboard = () => {
                       {isEditable && !goal.is_locked && (
                         <button
                           onClick={() => deleteGoal(goal)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="btn btn-ghost p-2 hover:text-red-600 hover:bg-red-50"
                           title={goal.is_shared ? "Shared goals cannot be deleted" : "Delete Goal"}
                         >
                           <X className="w-5 h-5" />
@@ -370,74 +412,76 @@ const EmployeeDashboard = () => {
 
           {/* Add Goal Modal */}
           {showAddGoal && (
-            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-                <div className="flex justify-between items-center mb-4">
+            <div className="modal-backdrop">
+              <div className="modal-panel max-w-lg">
+                <div className="modal-header">
                   <h3 className="text-xl font-bold text-slate-800">Add New Goal</h3>
-                  <button onClick={() => setShowAddGoal(false)} className="text-slate-400 hover:text-slate-600">
+                  <button onClick={() => setShowAddGoal(false)} className="btn btn-ghost p-2">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <form onSubmit={addGoal} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-slate-700 block mb-1">Title *</label>
-                      <input required value={goalForm.title} onChange={e => setGoalForm(f => ({...f, title: e.target.value}))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Goal title" />
+                <div className="modal-body">
+                  <form onSubmit={addGoal} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label block mb-1">Title *</label>
+                        <input required value={goalForm.title} onChange={e => setGoalForm(f => ({...f, title: e.target.value}))}
+                          className="input" placeholder="Goal title" />
+                      </div>
+                      <div>
+                        <label className="label block mb-1">Thrust Area *</label>
+                        <input required value={goalForm.thrust_area} onChange={e => setGoalForm(f => ({...f, thrust_area: e.target.value}))}
+                          className="input" placeholder="e.g. Sales" />
+                      </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-slate-700 block mb-1">Thrust Area *</label>
-                      <input required value={goalForm.thrust_area} onChange={e => setGoalForm(f => ({...f, thrust_area: e.target.value}))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" placeholder="e.g. Sales" />
+                      <label className="label block mb-1">Description</label>
+                      <input value={goalForm.description} onChange={e => setGoalForm(f => ({...f, description: e.target.value}))}
+                        className="input" placeholder="Brief description" />
                     </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 block mb-1">Description</label>
-                    <input value={goalForm.description} onChange={e => setGoalForm(f => ({...f, description: e.target.value}))}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Brief description" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-slate-700 block mb-1">Measurement Type *</label>
-                      <select value={goalForm.uom_type} onChange={e => setGoalForm(f => ({...f, uom_type: e.target.value}))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                        <option value="max_numeric">Max Numeric</option>
-                        <option value="min_numeric">Min Numeric</option>
-                        <option value="timeline">Timeline / Date</option>
-                        <option value="zero_based">Zero Based</option>
-                      </select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label block mb-1">Measurement Type *</label>
+                        <select value={goalForm.uom_type} onChange={e => setGoalForm(f => ({...f, uom_type: e.target.value}))}
+                          className="select">
+                          <option value="max_numeric">Max Numeric</option>
+                          <option value="min_numeric">Min Numeric</option>
+                          <option value="timeline">Timeline / Date</option>
+                          <option value="zero_based">Zero Based</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label block mb-1">Weightage (%) *</label>
+                        <input type="number" min="10" max="100" required value={goalForm.weightage}
+                          onChange={e => setGoalForm(f => ({...f, weightage: e.target.value}))}
+                          className="input" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-700 block mb-1">Weightage (%) *</label>
-                      <input type="number" min="10" max="100" required value={goalForm.weightage}
-                        onChange={e => setGoalForm(f => ({...f, weightage: e.target.value}))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" />
+                    {goalForm.uom_type === 'timeline' ? (
+                      <div>
+                        <label className="label block mb-1">Deadline Date</label>
+                        <input type="date" value={goalForm.deadline_date} onChange={e => setGoalForm(f => ({...f, deadline_date: e.target.value}))}
+                          className="input" />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="label block mb-1">Target Value</label>
+                        <input type="number" required value={goalForm.target_value_numeric} onChange={e => setGoalForm(f => ({...f, target_value_numeric: e.target.value}))}
+                          className="input" placeholder="e.g. 150000" />
+                      </div>
+                    )}
+                    <div className="flex gap-3 pt-2">
+                      <button type="button" onClick={() => setShowAddGoal(false)}
+                        className="btn btn-outline flex-1">
+                        Cancel
+                      </button>
+                      <button type="submit" disabled={goalSaving}
+                        className="btn btn-primary flex-1">
+                        {goalSaving ? 'Adding...' : 'Add Goal'}
+                      </button>
                     </div>
-                  </div>
-                  {goalForm.uom_type === 'timeline' ? (
-                    <div>
-                      <label className="text-sm font-medium text-slate-700 block mb-1">Deadline Date</label>
-                      <input type="date" value={goalForm.deadline_date} onChange={e => setGoalForm(f => ({...f, deadline_date: e.target.value}))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-sm font-medium text-slate-700 block mb-1">Target Value</label>
-                      <input type="number" value={goalForm.target_value_numeric} onChange={e => setGoalForm(f => ({...f, target_value_numeric: e.target.value}))}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" placeholder="e.g. 150000" />
-                    </div>
-                  )}
-                  <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setShowAddGoal(false)}
-                      className="flex-1 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 transition-colors text-sm">
-                      Cancel
-                    </button>
-                    <button type="submit" disabled={goalSaving}
-                      className="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white rounded-xl font-medium transition-colors text-sm">
-                      {goalSaving ? 'Adding...' : 'Add Goal'}
-                    </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               </div>
             </div>
           )}

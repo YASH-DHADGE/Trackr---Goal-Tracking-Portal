@@ -331,3 +331,57 @@ export const getManagerPlannedVsActual = async (req: AuthRequest, res: Response)
     res.status(500).json({ error: 'Server error fetching team planned vs actual data' });
   }
 };
+
+export const exportTeamGoalSheets = async (req: AuthRequest, res: Response) => {
+  const { cycleId } = req.params;
+  const managerId = req.user?.userId;
+
+  try {
+    const result = await query(
+      `SELECT 
+        u.full_name as employee_name, 
+        u.email as employee_email,
+        COALESCE(gs.status, 'draft') as status,
+        gs.submitted_at,
+        g.title as goal_title,
+        g.thrust_area,
+        g.weightage,
+        g.uom_type,
+        COALESCE(g.target_value_numeric::text, g.target_value_text, g.deadline_date::text) as target
+       FROM user_reporting ur
+       JOIN users u ON ur.employee_id = u.id
+       LEFT JOIN goal_sheets gs ON gs.employee_id = u.id AND gs.cycle_id = $2
+       LEFT JOIN goals g ON gs.id = g.goal_sheet_id
+       WHERE ur.manager_id = $1 AND ur.is_active = TRUE
+       ORDER BY u.full_name, g.id`,
+      [managerId, cycleId]
+    );
+
+    const rows = result.rows;
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No data to export' });
+    }
+
+    const header = ['Employee Name', 'Employee Email', 'Sheet Status', 'Submitted At', 'Goal Title', 'Thrust Area', 'Weightage (%)', 'UOM Type', 'Target'];
+    const csvData = [
+      header.join(','),
+      ...rows.map(row => [
+        `"${row.employee_name}"`,
+        `"${row.employee_email}"`,
+        `"${row.status.toUpperCase()}"`,
+        `"${row.submitted_at ? new Date(row.submitted_at).toLocaleDateString() : 'N/A'}"`,
+        `"${row.goal_title || 'N/A'}"`,
+        `"${row.thrust_area || 'N/A'}"`,
+        row.weightage || 0,
+        `"${row.uom_type || 'N/A'}"`,
+        `"${row.target || 'N/A'}"`
+      ].join(','))
+    ].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=team_goals_export_${cycleId}.csv`);
+    res.status(200).send(csvData);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error exporting team goal sheets' });
+  }
+};

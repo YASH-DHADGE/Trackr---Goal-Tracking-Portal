@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMyGoalSheet, createGoalSheet, submitGoalSheet, getTeamGoalSheets, approveGoalSheet, reworkGoalSheet, unlockGoalSheet, getManagerPlannedVsActual } from '../controllers/goalSheetController';
+import { getMyGoalSheet, createGoalSheet, submitGoalSheet, getTeamGoalSheets, approveGoalSheet, reworkGoalSheet, unlockGoalSheet, getManagerPlannedVsActual, exportTeamGoalSheets } from '../controllers/goalSheetController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { roleGuard } from '../middleware/roleGuard';
 import { windowGuard } from '../middleware/windowGuard';
@@ -94,6 +94,22 @@ router.get('/team/:cycleId', roleGuard(['manager', 'admin']), getTeamGoalSheets)
  *       200: { description: Planned vs Actual data }
  */
 router.get('/team/:cycleId/planned-vs-actual', roleGuard(['manager', 'admin']), getManagerPlannedVsActual);
+
+/**
+ * @swagger
+ * /api/goal-sheets/team/{cycleId}/export:
+ *   get:
+ *     summary: Export team goal sheets to CSV (Manager only)
+ *     tags: [Goal Sheets]
+ *     parameters:
+ *       - in: path
+ *         name: cycleId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: CSV file }
+ */
+router.get('/team/:cycleId/export', roleGuard(['manager', 'admin']), exportTeamGoalSheets);
 
 /**
  * @swagger
