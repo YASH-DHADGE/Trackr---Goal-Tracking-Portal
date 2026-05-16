@@ -17,13 +17,6 @@ interface Goal {
   deadline_date: string | null; is_locked: boolean;
 }
 
-const statusColors: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-600',
-  submitted: 'bg-blue-100 text-blue-700',
-  rework_requested: 'bg-amber-100 text-amber-700',
-  approved: 'bg-emerald-100 text-emerald-700',
-  locked: 'bg-purple-100 text-purple-700',
-};
 
 const ManagerDashboard = () => {
   const [cycles, setCycles] = useState<Cycle[]>([]);

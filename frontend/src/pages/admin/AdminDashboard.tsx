@@ -17,11 +17,6 @@ interface User {
 }
 interface Cycle { id: string; name: string; status: string; start_date: string; end_date: string; }
 
-const roleColors: Record<string, string> = {
-  employee: 'bg-slate-100 text-slate-600',
-  manager: 'bg-indigo-100 text-indigo-700',
-  admin: 'bg-purple-100 text-purple-700',
-};
 
 const cycleStatusColors: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-600',
