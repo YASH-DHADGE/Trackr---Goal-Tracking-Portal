@@ -1,6 +1,6 @@
 # Software Requirements Specification (SRS)
 ## In-House Goal Setting & Tracking Portal
-**AtomQuest Hackathon 1.0 | Version 1.0 | May 2026**
+**MERN + Supabase PostgreSQL | Version 1.0 | May 2026**
 
 ---
 
@@ -19,7 +19,6 @@ The system is a web-based portal that enables employees to set, submit, and trac
 | Backend | Node.js, Express, TypeScript |
 | Database | Supabase (PostgreSQL) |
 | Authentication | Supabase Auth + JWT |
-| Deployment | Vercel (frontend), Render (backend) |
 | Version Control | GitHub |
 
 ### 1.4 Definitions & Acronyms

@@ -1,6 +1,6 @@
 # System Architecture
 ## In-House Goal Setting & Tracking Portal
-**AtomQuest Hackathon 1.0 | MERN + Supabase PostgreSQL | Version 1.0 | May 2026**
+**MERN + Supabase PostgreSQL | Version 1.0 | May 2026**
 
 ---
 
