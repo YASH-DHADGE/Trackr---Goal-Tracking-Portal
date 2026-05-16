@@ -1,62 +1,25 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
+import app from './app';
 import dotenv from 'dotenv';
 import { pool } from './config/db';
 import { runMigrations } from './config/migrate';
-import swaggerUi from 'swagger-ui-express';
-import { swaggerSpec } from './config/swagger';
-
 
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
-app.use(helmet());
-app.use(morgan('dev'));
-app.use(express.json());
+// Start server if not running as a serverless function
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV !== 'production') {
+  app.listen(PORT, async () => {
+    try {
+      await runMigrations();
+      const client = await pool.connect();
+      console.log('✅ Database connected successfully');
+      client.release();
+    } catch (err) {
+      console.error('❌ Database connection error:', err);
+    }
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
 
-// Routes
-import cycleRoutes from './routes/cycleRoutes';
-import goalSheetRoutes from './routes/goalSheetRoutes';
-import goalRoutes from './routes/goalRoutes';
-import checkinRoutes from './routes/checkinRoutes';
-import authRoutes from './routes/authRoutes';
-import userRoutes from './routes/userRoutes';
-import adminRoutes from './routes/adminRoutes';
-import sharedGoalRoutes from './routes/sharedGoalRoutes';
-
-// Basic health check route
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Goal Tracking Portal API is running' });
-});
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/cycles', cycleRoutes);
-app.use('/api/goal-sheets', goalSheetRoutes);
-app.use('/api/goals', goalRoutes);
-app.use('/api/checkins', checkinRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/shared-goals', sharedGoalRoutes);
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-
-// Start server
-app.listen(PORT, async () => {
-  try {
-    await runMigrations();
-    const client = await pool.connect();
-    console.log('✅ Database connected successfully');
-    client.release();
-  } catch (err) {
-    console.error('❌ Database connection error:', err);
-  }
-  console.log(`Server is running on port ${PORT}`);
-});
-
+export default app;

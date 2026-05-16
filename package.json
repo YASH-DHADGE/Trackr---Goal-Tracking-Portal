@@ -2,7 +2,12 @@
   "name": "trackr-goal-portal",
   "version": "1.0.0",
   "description": "Root package to manage Goal Tracking Portal",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
+
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
     "start": "concurrently \"cd backend && npm start\" \"cd frontend && npm run dev\""
