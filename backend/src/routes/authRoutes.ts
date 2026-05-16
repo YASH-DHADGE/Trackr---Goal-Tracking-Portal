@@ -6,7 +6,28 @@ import { AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// ---------- REGISTER ----------
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [full_name, email, password]
+ *             properties:
+ *               full_name: { type: string }
+ *               email: { type: string }
+ *               password: { type: string }
+ *               role: { type: string, enum: [employee, manager, admin] }
+ *     responses:
+ *       201: { description: User created successfully }
+ *       409: { description: Email already registered }
+ */
 router.post('/register', async (req: Request, res: Response) => {
   const { full_name, email, password, role, employee_code, department_id, designation } = req.body;
 
@@ -44,7 +65,26 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-// ---------- LOGIN ----------
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Log in a user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email: { type: string }
+ *               password: { type: string }
+ *     responses:
+ *       200: { description: Logged in successfully }
+ *       401: { description: Invalid email or password }
+ */
 router.post('/login', async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -83,7 +123,18 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-// ---------- ME (current user profile) ----------
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200: { description: Profile data }
+ *       401: { description: Unauthorized }
+ */
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const result = await query(

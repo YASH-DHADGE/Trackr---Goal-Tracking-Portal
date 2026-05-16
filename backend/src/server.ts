@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { pool } from './config/db';
 import { runMigrations } from './config/migrate';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
 
 
 dotenv.config();
@@ -42,6 +44,7 @@ app.use('/api/checkins', checkinRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/shared-goals', sharedGoalRoutes);
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 // Start server

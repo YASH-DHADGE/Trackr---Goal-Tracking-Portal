@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Users, CheckCircle, Clock, Search, ChevronRight, Loader2, X, Download } from 'lucide-react';
+import { Users, CheckCircle, Clock, Search, ChevronRight, Loader2, X, Download, BarChart2 } from 'lucide-react';
 import apiClient from '../../api/client';
 import ManagerCheckinView from './ManagerCheckinView';
+import PlannedVsActualTable from '../../components/PlannedVsActualTable';
 
 interface Cycle { id: string; name: string; status: string; }
 interface TeamSheet {
@@ -30,8 +31,9 @@ const ManagerDashboard = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionSheet, setActionSheet] = useState<TeamSheet | null>(null);
-  const [activeTab, setActiveTab] = useState<'goal_setting' | 'q1' | 'q2' | 'q3' | 'q4'>('goal_setting');
+  const [activeTab, setActiveTab] = useState<'goal_setting' | 'q1' | 'q2' | 'q3' | 'q4' | 'planned_vs_actual'>('goal_setting');
   const [actionGoals, setActionGoals] = useState<Goal[]>([]);
+  const [plannedVsActual, setPlannedVsActual] = useState<any[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Goal>>({});
@@ -57,8 +59,14 @@ const ManagerDashboard = () => {
   useEffect(() => {
     if (!activeCycle) return;
     setTeam([]);
+    setPlannedVsActual([]);
+    
     apiClient.get(`/goal-sheets/team/${activeCycle.id}`)
       .then(r => { setTeam(r.data); setFiltered(r.data); })
+      .catch(() => {});
+
+    apiClient.get(`/goal-sheets/team/${activeCycle.id}/planned-vs-actual`)
+      .then(r => setPlannedVsActual(r.data))
       .catch(() => {});
   }, [activeCycle]);
 
@@ -185,22 +193,25 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      <div className="flex gap-2 p-1 bg-white border border-slate-100 rounded-xl w-fit shadow-sm">
+      <div className="flex gap-2 p-1 bg-white border border-slate-100 rounded-xl w-fit shadow-sm overflow-x-auto max-w-full">
         {[
           { id: 'goal_setting', label: 'Goal Approvals' },
           { id: 'q1', label: 'Q1 Check-ins' },
           { id: 'q2', label: 'Q2 Check-ins' },
           { id: 'q3', label: 'Q3 Check-ins' },
           { id: 'q4', label: 'Q4 Check-ins' },
+          { id: 'planned_vs_actual', label: 'Planned vs Actual' },
         ].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id as any)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+            className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
             {t.label}
           </button>
         ))}
       </div>
 
-      {activeTab !== 'goal_setting' ? (
+      {activeTab === 'planned_vs_actual' ? (
+        activeCycle && <PlannedVsActualTable data={plannedVsActual} />
+      ) : activeTab !== 'goal_setting' ? (
         activeCycle && <ManagerCheckinView cycleId={activeCycle.id} quarter={activeTab} />
       ) : (
         <>

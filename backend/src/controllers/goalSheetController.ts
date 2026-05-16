@@ -3,6 +3,7 @@ import { query, getClient } from '../config/db';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { writeAuditLog } from '../utils/auditLogger';
 import { sendNotification } from '../utils/emailService';
+import { validateGoalSheetWeightage } from '../utils/validation';
 
 export const getMyGoalSheet = async (req: AuthRequest, res: Response) => {
   const { cycleId } = req.params;
@@ -49,14 +50,9 @@ export const submitGoalSheet = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Maximum 8 goals allowed.' });
     }
 
-    const totalWeightage = goals.reduce((sum: number, g: any) => sum + parseFloat(g.weightage), 0);
-    if (totalWeightage !== 100) {
-      return res.status(400).json({ error: `Total weightage must be exactly 100%. Currently it is ${totalWeightage}%.` });
-    }
-
-    const hasInvalidWeight = goals.some((g: any) => parseFloat(g.weightage) < 10);
-    if (hasInvalidWeight) {
-      return res.status(400).json({ error: 'Each goal must have a minimum of 10% weightage.' });
+    const validation = validateGoalSheetWeightage(goals);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
     }
 
     const client = await getClient();
@@ -261,5 +257,77 @@ export const unlockGoalSheet = async (req: AuthRequest, res: Response) => {
     }
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Server error unlocking goal sheet' });
+  }
+};
+
+export const getManagerPlannedVsActual = async (req: AuthRequest, res: Response) => {
+  const { cycleId } = req.params;
+  const managerId = req.user?.userId;
+
+  try {
+    const result = await query(`
+      SELECT 
+        u.id as employee_id,
+        u.full_name as employee_name,
+        g.id as goal_id,
+        g.title as goal_title,
+        g.thrust_area,
+        g.weightage,
+        g.uom_type,
+        g.target_value_numeric as planned_numeric,
+        g.target_value_text as planned_text,
+        g.deadline_date as planned_deadline,
+        qc.quarter,
+        gpe.actual_value_numeric as actual_numeric,
+        gpe.actual_value_text as actual_text,
+        gpe.completion_date as actual_date,
+        gpe.computed_progress_score as progress_score
+      FROM users u
+      JOIN user_reporting ur ON u.id = ur.employee_id
+      JOIN goal_sheets gs ON u.id = gs.employee_id AND gs.cycle_id = $1
+      JOIN goals g ON gs.id = g.goal_sheet_id
+      LEFT JOIN quarterly_checkins qc ON gs.id = qc.goal_sheet_id
+      LEFT JOIN goal_progress_entries gpe ON qc.id = gpe.checkin_id AND g.id = gpe.goal_id
+      WHERE gs.status IN ('approved', 'locked') AND ur.manager_id = $2 AND ur.is_active = TRUE
+      ORDER BY u.full_name, g.id, qc.quarter
+    `, [cycleId, managerId]);
+
+    const data: Record<string, any> = {};
+    
+    result.rows.forEach(row => {
+      if (!data[row.employee_id]) {
+        data[row.employee_id] = {
+          employeeName: row.employee_name,
+          goals: {}
+        };
+      }
+      
+      const emp = data[row.employee_id];
+      if (!emp.goals[row.goal_id]) {
+        emp.goals[row.goal_id] = {
+          id: row.goal_id,
+          title: row.goal_title,
+          thrustArea: row.thrust_area,
+          weightage: row.weightage,
+          uomType: row.uom_type,
+          plannedTarget: row.planned_numeric || row.planned_deadline || row.planned_text,
+          q1: null, q2: null, q3: null, q4: null
+        };
+      }
+      
+      if (row.quarter) {
+        emp.goals[row.goal_id][row.quarter] = {
+          actual: row.actual_numeric || row.actual_date || row.actual_text,
+          score: row.progress_score
+        };
+      }
+    });
+
+    res.json(Object.values(data).map(emp => ({
+      employeeName: emp.employeeName,
+      goals: Object.values(emp.goals)
+    })));
+  } catch (error) {
+    res.status(500).json({ error: 'Server error fetching team planned vs actual data' });
   }
 };

@@ -25,14 +25,14 @@ export const computeScore = (
     case 'min_numeric': {
       const t = Number(target);
       const a = Number(actual);
-      if (isNaN(t) || isNaN(a) || t === 0) return 0;
-      return a / t;
+      if (isNaN(t) || isNaN(a) || a === 0) return 0;
+      return t / a; // target / actual (lower actual = higher score)
     }
     case 'max_numeric': {
       const t = Number(target);
       const a = Number(actual);
-      if (isNaN(t) || isNaN(a) || a === 0) return 0;
-      return t / a;
+      if (isNaN(t) || isNaN(a) || t === 0) return 0;
+      return a / t; // actual / target (higher actual = higher score)
     }
     case 'zero_based':
       return Number(actual) === 0 ? 1.0 : 0.0;

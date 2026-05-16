@@ -5,6 +5,7 @@ import AdminReportsView from './AdminReportsView';
 import AdminLogsView from './AdminLogsView';
 import AdminSharedGoalsView from './AdminSharedGoalsView';
 import AdminHierarchyView from './AdminHierarchyView';
+import AdminAnalyticsView from './AdminAnalyticsView';
 import SharedGoalModal from '../../components/SharedGoalModal';
 import CycleWindowsModal from '../../components/CycleWindowsModal';
 import { Target } from 'lucide-react';
@@ -29,7 +30,7 @@ const cycleStatusColors: Record<string, string> = {
 };
 
 const AdminDashboard = () => {
-  const [tab, setTab] = useState<'users' | 'cycles' | 'reports' | 'logs' | 'shared_goals'>('users');
+  const [tab, setTab] = useState<'users' | 'cycles' | 'reports' | 'logs' | 'shared_goals' | 'analytics'>('analytics');
   const [userView, setUserView] = useState<'list' | 'tree'>('list');
   const [users, setUsers] = useState<User[]>([]);
   const [cycles, setCycles] = useState<Cycle[]>([]);
@@ -141,11 +142,11 @@ const AdminDashboard = () => {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { icon: <Calendar className="w-8 h-8" />, label: 'Review Cycles', desc: 'Create & manage FY cycles', color: 'bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white', action: () => setTab('cycles') },
-          { icon: <Users className="w-8 h-8" />, label: 'User Management', desc: 'Manage roles & access', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white', action: () => setTab('users') },
+          { icon: <TrendingUp className="w-8 h-8" />, label: 'Analytics', desc: 'Advanced performance insights', color: 'bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white', action: () => setTab('analytics') },
+          { icon: <Calendar className="w-8 h-8" />, label: 'Review Cycles', desc: 'Create & manage FY cycles', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white', action: () => setTab('cycles') },
+          { icon: <Users className="w-8 h-8" />, label: 'User Management', desc: 'Manage roles & access', color: 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white', action: () => setTab('users') },
           { icon: <FileText className="w-8 h-8" />, label: 'Reports', desc: 'View completion reports', color: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white', action: () => setTab('reports') },
           { icon: <Target className="w-8 h-8" />, label: 'Shared Goals', desc: 'Manage strategic KPIs', color: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white', action: () => setTab('shared_goals') },
-          { icon: <Database className="w-8 h-8" />, label: 'Audit Logs', desc: 'Track system changes', color: 'bg-slate-100 text-slate-600 group-hover:bg-slate-600 group-hover:text-white', action: () => setTab('logs') },
         ].map(item => (
           <div key={item.label}
             onClick={item.action}
@@ -162,11 +163,12 @@ const AdminDashboard = () => {
       {/* Tabs */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="border-b border-slate-100 flex flex-wrap">
-          {(['users', 'cycles', 'reports', 'logs', 'shared_goals'] as const).map(t => (
+          {(['analytics', 'users', 'cycles', 'reports', 'logs', 'shared_goals'] as const).map(t => (
             <button key={t}
               onClick={() => setTab(t as any)}
               className={`px-6 py-4 text-sm font-semibold capitalize transition-colors ${tab === t ? 'text-brand-600 border-b-2 border-brand-600 bg-brand-50/50' : 'text-slate-500 hover:text-slate-700'}`}>
-              {t === 'users' ? <><Users className="w-4 h-4 inline mr-1.5" />Users</> : 
+              {t === 'analytics' ? <><TrendingUp className="w-4 h-4 inline mr-1.5" />Analytics</> :
+               t === 'users' ? <><Users className="w-4 h-4 inline mr-1.5" />Users</> : 
                t === 'cycles' ? <><Calendar className="w-4 h-4 inline mr-1.5" />Cycles</> :
                t === 'reports' ? <><FileText className="w-4 h-4 inline mr-1.5" />Reports</> :
                t === 'shared_goals' ? <><Target className="w-4 h-4 inline mr-1.5" />Shared Goals</> :
@@ -193,6 +195,8 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
           </div>
+        ) : tab === 'analytics' ? (
+          <AdminAnalyticsView cycleId={activeCycleId} />
         ) : tab === 'reports' ? (
           <AdminReportsView />
         ) : tab === 'shared_goals' ? (

@@ -8,7 +8,6 @@ interface Goal {
 interface CheckinEntry {
   goal_id: string; actual_value_numeric: string | null; actual_value_text: string | null; completion_date: string | null; status: 'not_started' | 'on_track' | 'completed'; remarks: string | null;
 }
-}
 interface Checkin {
   id: string; employee_status: string; manager_status: string; entries: CheckinEntry[];
 }

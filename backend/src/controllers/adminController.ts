@@ -160,3 +160,120 @@ export const exportAchievementReport = async (req: AuthRequest, res: Response) =
     res.status(500).json({ error: 'Server error exporting report' });
   }
 };
+
+export const getAnalyticsSummary = async (req: AuthRequest, res: Response) => {
+  const { cycleId } = req.query;
+  if (!cycleId) return res.status(400).json({ error: 'cycleId is required' });
+
+  try {
+    const statsResult = await query(`
+      SELECT 
+        COUNT(u.id) as total_employees,
+        COUNT(gs.id) as total_sheets,
+        SUM(CASE WHEN gs.status IN ('submitted', 'approved', 'locked', 'rework_requested') THEN 1 ELSE 0 END) as submitted_sheets,
+        SUM(CASE WHEN gs.status IN ('approved', 'locked') THEN 1 ELSE 0 END) as approved_sheets,
+        SUM(CASE WHEN gs.status = 'draft' THEN 1 ELSE 0 END) as draft_sheets,
+        SUM(CASE WHEN gs.status = 'rework_requested' THEN 1 ELSE 0 END) as rework_sheets
+      FROM users u
+      LEFT JOIN goal_sheets gs ON u.id = gs.employee_id AND gs.cycle_id = $1
+      WHERE u.role IN ('employee', 'manager') AND u.is_active = TRUE
+    `, [cycleId]);
+
+    const quarterScores = await query(`
+      SELECT qc.quarter, AVG(gpe.computed_progress_score) as avg_score
+      FROM quarterly_checkins qc
+      JOIN goal_progress_entries gpe ON qc.id = gpe.checkin_id
+      WHERE qc.cycle_id = $1 AND gpe.computed_progress_score IS NOT NULL
+      GROUP BY qc.quarter
+    `, [cycleId]);
+
+    const stats = statsResult.rows[0];
+    res.json({
+      totalEmployees: parseInt(stats.total_employees || '0'),
+      totalSheets: parseInt(stats.total_sheets || '0'),
+      submittedSheets: parseInt(stats.submitted_sheets || '0'),
+      approvedSheets: parseInt(stats.approved_sheets || '0'),
+      draftSheets: parseInt(stats.draft_sheets || '0'),
+      reworkSheets: parseInt(stats.rework_sheets || '0'),
+      quarterlyAverages: quarterScores.rows.reduce((acc, row) => {
+        acc[row.quarter] = parseFloat(row.avg_score).toFixed(1);
+        return acc;
+      }, {} as Record<string, string>)
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error fetching analytics summary' });
+  }
+};
+
+export const getPlannedVsActual = async (req: AuthRequest, res: Response) => {
+  const { cycleId } = req.query;
+  if (!cycleId) return res.status(400).json({ error: 'cycleId is required' });
+
+  try {
+    // Only fetch for approved/locked sheets
+    const result = await query(`
+      SELECT 
+        u.id as employee_id,
+        u.full_name as employee_name,
+        g.id as goal_id,
+        g.title as goal_title,
+        g.thrust_area,
+        g.weightage,
+        g.uom_type,
+        g.target_value_numeric as planned_numeric,
+        g.target_value_text as planned_text,
+        g.deadline_date as planned_deadline,
+        qc.quarter,
+        gpe.actual_value_numeric as actual_numeric,
+        gpe.actual_value_text as actual_text,
+        gpe.completion_date as actual_date,
+        gpe.computed_progress_score as progress_score
+      FROM users u
+      JOIN goal_sheets gs ON u.id = gs.employee_id AND gs.cycle_id = $1
+      JOIN goals g ON gs.id = g.goal_sheet_id
+      LEFT JOIN quarterly_checkins qc ON gs.id = qc.goal_sheet_id
+      LEFT JOIN goal_progress_entries gpe ON qc.id = gpe.checkin_id AND g.id = gpe.goal_id
+      WHERE gs.status IN ('approved', 'locked')
+      ORDER BY u.full_name, g.id, qc.quarter
+    `, [cycleId]);
+
+    // Group by employee, then by goal
+    const data: Record<string, any> = {};
+    
+    result.rows.forEach(row => {
+      if (!data[row.employee_id]) {
+        data[row.employee_id] = {
+          employeeName: row.employee_name,
+          goals: {}
+        };
+      }
+      
+      const emp = data[row.employee_id];
+      if (!emp.goals[row.goal_id]) {
+        emp.goals[row.goal_id] = {
+          id: row.goal_id,
+          title: row.goal_title,
+          thrustArea: row.thrust_area,
+          weightage: row.weightage,
+          uomType: row.uom_type,
+          plannedTarget: row.planned_numeric || row.planned_deadline || row.planned_text,
+          q1: null, q2: null, q3: null, q4: null
+        };
+      }
+      
+      if (row.quarter) {
+        emp.goals[row.goal_id][row.quarter] = {
+          actual: row.actual_numeric || row.actual_date || row.actual_text,
+          score: row.progress_score
+        };
+      }
+    });
+
+    res.json(Object.values(data).map(emp => ({
+      employeeName: emp.employeeName,
+      goals: Object.values(emp.goals)
+    })));
+  } catch (error) {
+    res.status(500).json({ error: 'Server error fetching planned vs actual data' });
+  }
+};
