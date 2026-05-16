@@ -3,6 +3,7 @@ import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import Landing from './pages/Landing';
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -15,14 +16,15 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Navigate to={
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<Navigate to={
               localStorage.getItem('role') === 'admin' ? '/admin/dashboard' :
               localStorage.getItem('role') === 'manager' ? '/manager/dashboard' :
               '/employee/dashboard'

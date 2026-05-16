@@ -74,9 +74,9 @@ const MainLayout = () => {
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
           
-          <div className="flex items-center gap-2.5 group cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform duration-300">
-              <Shield className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-2.5 group cursor-pointer" onClick={() => navigate('/dashboard')}>
+            <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-lg shadow-brand-500/10 group-hover:scale-105 transition-transform duration-300 border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <img src="/logo.png" alt="Trackr Logo" className="w-8 h-8 object-contain" />
             </div>
             <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent hidden xs:block">
               Trackr

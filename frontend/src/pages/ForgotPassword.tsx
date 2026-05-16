@@ -35,7 +35,10 @@ const ForgotPassword = () => {
 
           {!sent ? (
             <>
-              <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">Forgot Password?</h1>
+              <div className="flex justify-center mb-4">
+                <img src="/logo.png" alt="Trackr Logo" className="w-16 h-16 object-contain drop-shadow-lg" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2 text-center">Forgot Password?</h1>
               <p className="text-slate-500 dark:text-slate-400 mb-8 font-medium">
                 No worries! Enter your email below and we'll send you a link to reset your password.
               </p>
