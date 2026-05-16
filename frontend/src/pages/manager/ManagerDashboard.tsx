@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Users, CheckCircle, Clock, Search, ChevronRight, Loader2, X, ThumbsUp, RefreshCw } from 'lucide-react';
+import { Users, CheckCircle, Clock, Search, ChevronRight, Loader2, X, Download } from 'lucide-react';
 import apiClient from '../../api/client';
+import ManagerCheckinView from './ManagerCheckinView';
 
 interface Cycle { id: string; name: string; status: string; }
 interface TeamSheet {
   id: string; status: string; submitted_at: string | null;
   employee_name: string; employee_email: string;
+}
+interface Goal {
+  id: string; title: string; thrust_area: string; weightage: number;
+  uom_type: string; target_value_numeric: string | null; target_value_text: string | null;
+  deadline_date: string | null; is_locked: boolean;
 }
 
 const statusColors: Record<string, string> = {
@@ -24,6 +30,11 @@ const ManagerDashboard = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionSheet, setActionSheet] = useState<TeamSheet | null>(null);
+  const [activeTab, setActiveTab] = useState<'goal_setting' | 'q1' | 'q2' | 'q3' | 'q4'>('goal_setting');
+  const [actionGoals, setActionGoals] = useState<Goal[]>([]);
+  const [goalsLoading, setGoalsLoading] = useState(false);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Goal>>({});
   const [actionType, setActionType] = useState<'approve' | 'rework' | null>(null);
   const [reworkNote, setReworkNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -58,6 +69,32 @@ const ManagerDashboard = () => {
     ));
   }, [search, team]);
 
+  const handleReview = async (member: TeamSheet) => {
+    setActionSheet(member);
+    setActionType(null);
+    setReworkNote('');
+    setEditingGoalId(null);
+    setGoalsLoading(true);
+    try {
+      const r = await apiClient.get(`/goals?sheetId=${member.id}`);
+      setActionGoals(r.data);
+    } catch (e) {
+      setError('Could not load goals for this sheet.');
+    } finally {
+      setGoalsLoading(false);
+    }
+  };
+
+  const saveGoalEdit = async (goalId: string) => {
+    try {
+      const r = await apiClient.patch(`/goals/${goalId}`, editForm);
+      setActionGoals(prev => prev.map(g => g.id === goalId ? { ...g, ...r.data } : g));
+      setEditingGoalId(null);
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Failed to update goal.');
+    }
+  };
+
   const handleAction = async () => {
     if (!actionSheet || !actionType) return;
     setActionLoading(true);
@@ -77,6 +114,24 @@ const ManagerDashboard = () => {
       setError(e.response?.data?.error || 'Action failed.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const downloadAchievementReport = async () => {
+    if (!activeCycle) return;
+    try {
+      const response = await apiClient.get(`/admin/reports/achievement/export?cycleId=${activeCycle.id}`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `achievement_report.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e: any) {
+      alert('Failed to download report');
     }
   };
 
@@ -109,18 +164,47 @@ const ManagerDashboard = () => {
             {activeCycle && <span className="text-slate-400"> · {activeCycle.name}</span>}
           </p>
         </div>
-        {cycles.length > 1 && (
-          <select
-            className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
-            value={activeCycle?.id || ''}
-            onChange={e => setActiveCycle(cycles.find(c => c.id === e.target.value) || null)}
-          >
-            {cycles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        )}
+        <div className="flex items-center gap-3">
+          {cycles.length > 1 && (
+            <select
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+              value={activeCycle?.id || ''}
+              onChange={e => { setActiveCycle(cycles.find(c => c.id === e.target.value) || null); setActiveTab('goal_setting'); }}
+            >
+              {cycles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+          {activeCycle && (
+            <button 
+              onClick={downloadAchievementReport}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Download className="w-4 h-4" /> Export
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Stats */}
+      <div className="flex gap-2 p-1 bg-white border border-slate-100 rounded-xl w-fit shadow-sm">
+        {[
+          { id: 'goal_setting', label: 'Goal Approvals' },
+          { id: 'q1', label: 'Q1 Check-ins' },
+          { id: 'q2', label: 'Q2 Check-ins' },
+          { id: 'q3', label: 'Q3 Check-ins' },
+          { id: 'q4', label: 'Q4 Check-ins' },
+        ].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id as any)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab !== 'goal_setting' ? (
+        activeCycle && <ManagerCheckinView cycleId={activeCycle.id} quarter={activeTab} />
+      ) : (
+        <>
+          {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
           <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600"><Users className="w-8 h-8" /></div>
@@ -194,16 +278,10 @@ const ManagerDashboard = () => {
                       {member.status === 'submitted' ? (
                         <div className="flex gap-2 justify-end">
                           <button
-                            onClick={() => { setActionSheet(member); setActionType('approve'); }}
-                            className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors"
+                            onClick={() => handleReview(member)}
+                            className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700 px-3 py-1.5 rounded-lg hover:bg-brand-50 transition-colors"
                           >
-                            <ThumbsUp className="w-4 h-4" /> Approve
-                          </button>
-                          <button
-                            onClick={() => { setActionSheet(member); setActionType('rework'); }}
-                            className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-50 transition-colors"
-                          >
-                            <RefreshCw className="w-4 h-4" /> Rework
+                            <Search className="w-4 h-4" /> Review
                           </button>
                         </div>
                       ) : (
@@ -221,43 +299,130 @@ const ManagerDashboard = () => {
       </div>
 
       {/* Action Modal */}
-      {actionSheet && actionType && (
+      {actionSheet && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h3 className="text-xl font-bold text-slate-800 mb-2">
-              {actionType === 'approve' ? '✅ Approve Goal Sheet' : '🔄 Request Rework'}
-            </h3>
-            <p className="text-slate-500 text-sm mb-4">
-              {actionSheet.employee_name}'s goal sheet
-            </p>
-            {actionType === 'rework' && (
-              <div className="mb-4">
-                <label className="text-sm font-medium text-slate-700 block mb-1">Reason for rework *</label>
-                <textarea
-                  rows={3} required
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none resize-none"
-                  placeholder="Explain what needs to be changed..."
-                  value={reworkNote} onChange={e => setReworkNote(e.target.value)}
-                />
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">
+                  Review Goal Sheet
+                </h3>
+                <p className="text-slate-500 text-sm mt-1">
+                  {actionSheet.employee_name} ({actionSheet.employee_email})
+                </p>
               </div>
-            )}
-            <div className="flex gap-3">
-              <button onClick={() => { setActionSheet(null); setActionType(null); }}
-                className="flex-1 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 transition-colors text-sm">
-                Cancel
+              <button onClick={() => setActionSheet(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
               </button>
-              <button
-                onClick={handleAction}
-                disabled={actionLoading || (actionType === 'rework' && !reworkNote.trim())}
-                className={`flex-1 py-2.5 rounded-xl text-white font-medium transition-colors text-sm disabled:opacity-60 ${
-                  actionType === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'
-                }`}
-              >
-                {actionLoading ? 'Processing...' : actionType === 'approve' ? 'Confirm Approve' : 'Send for Rework'}
-              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+              {goalsLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>
+              ) : (
+                <div className="space-y-4">
+                  {actionGoals.map(goal => (
+                    <div key={goal.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-800">{goal.title}</h4>
+                          <p className="text-xs text-slate-500 mt-1">Thrust Area: {goal.thrust_area}</p>
+                          
+                          {editingGoalId === goal.id ? (
+                            <div className="mt-4 grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                              <div>
+                                <label className="text-xs font-medium text-slate-700 block mb-1">Weightage (%)</label>
+                                <input type="number" value={editForm.weightage || ''} onChange={e => setEditForm({...editForm, weightage: parseFloat(e.target.value)})}
+                                  className="w-full border border-slate-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-brand-500 outline-none" />
+                              </div>
+                              {goal.uom_type === 'timeline' ? (
+                                <div>
+                                  <label className="text-xs font-medium text-slate-700 block mb-1">Deadline</label>
+                                  <input type="date" value={editForm.deadline_date || ''} onChange={e => setEditForm({...editForm, deadline_date: e.target.value})}
+                                    className="w-full border border-slate-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-brand-500 outline-none" />
+                                </div>
+                              ) : goal.uom_type === 'zero_based' || goal.uom_type === 'max_numeric' || goal.uom_type === 'min_numeric' ? (
+                                <div>
+                                  <label className="text-xs font-medium text-slate-700 block mb-1">Target Numeric</label>
+                                  <input type="number" value={editForm.target_value_numeric || ''} onChange={e => setEditForm({...editForm, target_value_numeric: e.target.value})}
+                                    className="w-full border border-slate-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-brand-500 outline-none" />
+                                </div>
+                              ) : (
+                                <div>
+                                  <label className="text-xs font-medium text-slate-700 block mb-1">Target Text</label>
+                                  <input type="text" value={editForm.target_value_text || ''} onChange={e => setEditForm({...editForm, target_value_text: e.target.value})}
+                                    className="w-full border border-slate-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-brand-500 outline-none" />
+                                </div>
+                              )}
+                              <div className="col-span-2 flex gap-2 justify-end mt-2">
+                                <button onClick={() => setEditingGoalId(null)} className="px-3 py-1 text-xs text-slate-600 border border-slate-200 hover:bg-slate-100 rounded">Cancel</button>
+                                <button onClick={() => saveGoalEdit(goal.id)} className="px-3 py-1 text-xs text-white bg-brand-600 hover:bg-brand-700 rounded">Save</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex gap-6 mt-3">
+                              <span className="text-sm"><span className="text-slate-400">Weightage:</span> <span className="font-medium">{goal.weightage}%</span></span>
+                              <span className="text-sm"><span className="text-slate-400">Target:</span> <span className="font-medium">
+                                {goal.uom_type === 'timeline' ? goal.deadline_date : goal.target_value_numeric || goal.target_value_text || '—'}
+                              </span></span>
+                            </div>
+                          )}
+                        </div>
+                        {!editingGoalId && (
+                          <button onClick={() => { setEditingGoalId(goal.id); setEditForm(goal); }} className="text-brand-600 hover:text-brand-800 text-sm font-medium">Edit</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {actionGoals.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-xl mt-4">
+                      <strong>Total Weightage:</strong> {actionGoals.reduce((s,g)=>s+Number(g.weightage),0)}%
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 border-t border-slate-100 shrink-0 bg-white">
+              {actionType === 'rework' && (
+                <div className="mb-4">
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Reason for rework *</label>
+                  <textarea
+                    rows={3} required
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none resize-none"
+                    placeholder="Explain what needs to be changed..."
+                    value={reworkNote} onChange={e => setReworkNote(e.target.value)}
+                  />
+                </div>
+              )}
+              
+              <div className="flex gap-3 justify-end">
+                {!actionType ? (
+                  <>
+                    <button onClick={() => setActionType('rework')} className="px-5 py-2.5 rounded-xl font-medium border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Request Rework</button>
+                    <button onClick={() => setActionType('approve')} className="px-5 py-2.5 rounded-xl font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">Approve Sheet</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setActionType(null)} className="px-5 py-2.5 rounded-xl font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Back</button>
+                    <button
+                      onClick={handleAction}
+                      disabled={actionLoading || (actionType === 'rework' && !reworkNote.trim())}
+                      className={`px-5 py-2.5 rounded-xl text-white font-medium transition-colors disabled:opacity-60 ${
+                        actionType === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'
+                      }`}
+                    >
+                      {actionLoading ? 'Processing...' : actionType === 'approve' ? 'Confirm Approve' : 'Send for Rework'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

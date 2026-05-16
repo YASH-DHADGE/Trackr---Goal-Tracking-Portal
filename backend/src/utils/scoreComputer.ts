@@ -1,9 +1,11 @@
 export const computeTimelineScore = (deadline: Date, completionDate: Date | null): number => {
-  if (!completionDate) return 0;
+  const d = typeof deadline === 'string' ? new Date(deadline) : deadline;
+  const c = typeof completionDate === 'string' ? new Date(completionDate) : completionDate;
+
+  if (!c || isNaN(c.getTime())) return 0;
+  if (!d || isNaN(d.getTime())) return 0;
   
-  // Calculate difference in days (deadline - completionDate)
-  // Positive means early or on time, negative means late
-  const diffTime = deadline.getTime() - completionDate.getTime();
+  const diffTime = d.getTime() - c.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays >= 0) return 1.0;   // On time or early
@@ -20,14 +22,20 @@ export const computeScore = (
   completionDate: Date | null
 ): number => {
   switch (uomType) {
-    case 'min_numeric':
-      if (target === null || actual === null || target === 0) return 0;
-      return actual / target;
-    case 'max_numeric':
-      if (target === null || actual === null || actual === 0) return 0;
-      return target / actual;
+    case 'min_numeric': {
+      const t = Number(target);
+      const a = Number(actual);
+      if (isNaN(t) || isNaN(a) || t === 0) return 0;
+      return a / t;
+    }
+    case 'max_numeric': {
+      const t = Number(target);
+      const a = Number(actual);
+      if (isNaN(t) || isNaN(a) || a === 0) return 0;
+      return t / a;
+    }
     case 'zero_based':
-      return actual === 0 ? 1.0 : 0.0;
+      return Number(actual) === 0 ? 1.0 : 0.0;
     case 'timeline':
       if (!deadline) return 0;
       return computeTimelineScore(deadline, completionDate);

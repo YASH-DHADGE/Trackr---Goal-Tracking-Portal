@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
-import { Target, LogOut, User, LayoutDashboard, Users, Shield, ChevronRight } from 'lucide-react';
+import { Target, LogOut, LayoutDashboard, Users, Shield, ChevronRight } from 'lucide-react';
 
 interface NavItem {
   to: string;
@@ -9,7 +9,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { to: '/employee/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, label: 'My Goals',       roles: ['employee', 'manager', 'admin'] },
+  { to: '/employee/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, label: 'My Goals',       roles: ['employee'] },
   { to: '/manager/dashboard',  icon: <Users className="w-5 h-5" />,          label: 'Team Review',    roles: ['manager', 'admin'] },
   { to: '/admin/dashboard',    icon: <Shield className="w-5 h-5" />,          label: 'Admin Panel',    roles: ['admin'] },
 ];

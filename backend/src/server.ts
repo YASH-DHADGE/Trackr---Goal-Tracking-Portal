@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { pool } from './config/db';
+import { runMigrations } from './config/migrate';
 
 
 dotenv.config();
@@ -24,6 +25,8 @@ import goalRoutes from './routes/goalRoutes';
 import checkinRoutes from './routes/checkinRoutes';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
+import adminRoutes from './routes/adminRoutes';
+import sharedGoalRoutes from './routes/sharedGoalRoutes';
 
 // Basic health check route
 app.get('/health', (req, res) => {
@@ -37,11 +40,14 @@ app.use('/api/goal-sheets', goalSheetRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/checkins', checkinRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/shared-goals', sharedGoalRoutes);
 
 
 // Start server
 app.listen(PORT, async () => {
   try {
+    await runMigrations();
     const client = await pool.connect();
     console.log('✅ Database connected successfully');
     client.release();

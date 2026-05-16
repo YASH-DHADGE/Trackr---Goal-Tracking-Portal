@@ -5,8 +5,11 @@ import { AuthRequest } from '../middleware/authMiddleware';
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
     const result = await query(
-      `SELECT id, employee_code, full_name, email, role, designation, is_active, created_at
-       FROM users ORDER BY created_at DESC`
+      `SELECT u.id, u.employee_code, u.full_name, u.email, u.role, u.designation, u.is_active, u.created_at,
+              ur.manager_id
+       FROM users u
+       LEFT JOIN user_reporting ur ON u.id = ur.employee_id AND ur.is_active = TRUE
+       ORDER BY u.created_at DESC`
     );
     res.json(result.rows);
   } catch (error) {

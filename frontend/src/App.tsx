@@ -18,7 +18,11 @@ function App() {
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<MainLayout />}>
-            <Route index element={<Navigate to="/employee/dashboard" replace />} />
+            <Route index element={<Navigate to={
+              localStorage.getItem('role') === 'admin' ? '/admin/dashboard' :
+              localStorage.getItem('role') === 'manager' ? '/manager/dashboard' :
+              '/employee/dashboard'
+            } replace />} />
             <Route path="employee/dashboard" element={<EmployeeDashboard />} />
             <Route path="manager/dashboard" element={<ManagerDashboard />} />
             <Route path="admin/dashboard" element={<AdminDashboard />} />

@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Settings, FileText, Database, Users, Plus, Loader2, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Calendar, FileText, Database, Users, Plus, Loader2, X, ToggleLeft, ToggleRight } from 'lucide-react';
 import apiClient from '../../api/client';
+import AdminReportsView from './AdminReportsView';
+import AdminLogsView from './AdminLogsView';
+import AdminSharedGoalsView from './AdminSharedGoalsView';
+import AdminHierarchyView from './AdminHierarchyView';
+import SharedGoalModal from '../../components/SharedGoalModal';
+import CycleWindowsModal from '../../components/CycleWindowsModal';
+import { Target } from 'lucide-react';
 
 interface User {
   id: string; full_name: string; email: string; role: string;
   designation: string | null; employee_code: string; is_active: boolean; created_at: string;
+  manager_id?: string;
 }
 interface Cycle { id: string; name: string; status: string; start_date: string; end_date: string; }
 
@@ -21,7 +29,8 @@ const cycleStatusColors: Record<string, string> = {
 };
 
 const AdminDashboard = () => {
-  const [tab, setTab] = useState<'users' | 'cycles'>('users');
+  const [tab, setTab] = useState<'users' | 'cycles' | 'reports' | 'logs' | 'shared_goals'>('users');
+  const [userView, setUserView] = useState<'list' | 'tree'>('list');
   const [users, setUsers] = useState<User[]>([]);
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,6 +38,9 @@ const AdminDashboard = () => {
   const [showAddCycle, setShowAddCycle] = useState(false);
   const [cycleForm, setCycleForm] = useState({ name: '', start_date: '', end_date: '' });
   const [cycleLoading, setCycleLoading] = useState(false);
+  const [showSharedGoalModal, setShowSharedGoalModal] = useState(false);
+  const [activeCycleId, setActiveCycleId] = useState<string>('');
+  const [windowModalCycle, setWindowModalCycle] = useState<{id: string, name: string} | null>(null);
 
   const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -46,6 +58,8 @@ const AdminDashboard = () => {
     try {
       const r = await apiClient.get('/cycles');
       setCycles(r.data);
+      const active = r.data.find((c: any) => c.status === 'active') || r.data[0];
+      if (active) setActiveCycleId(active.id);
     } catch { setError('Could not load cycles.'); }
     finally { setLoading(false); }
   };
@@ -69,6 +83,16 @@ const AdminDashboard = () => {
       const r = await apiClient.patch(`/users/${userId}/toggle`);
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: r.data.is_active } : u));
     } catch { setError('Failed to toggle user.'); }
+  };
+
+  const changeManager = async (employeeId: string, managerId: string) => {
+    if (!managerId) return;
+    try {
+      await apiClient.post('/admin/reporting', { employee_id: employeeId, manager_id: managerId });
+      setUsers(prev => prev.map(u => u.id === employeeId ? { ...u, manager_id: managerId } : u));
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Failed to assign manager.');
+    }
   };
 
   const changeCycleStatus = async (cycleId: string, status: string) => {
@@ -119,8 +143,9 @@ const AdminDashboard = () => {
         {[
           { icon: <Calendar className="w-8 h-8" />, label: 'Review Cycles', desc: 'Create & manage FY cycles', color: 'bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white', action: () => setTab('cycles') },
           { icon: <Users className="w-8 h-8" />, label: 'User Management', desc: 'Manage roles & access', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white', action: () => setTab('users') },
-          { icon: <FileText className="w-8 h-8" />, label: 'Reports', desc: 'View completion reports', color: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white', action: () => {} },
-          { icon: <Database className="w-8 h-8" />, label: 'Audit Logs', desc: 'Track system changes', color: 'bg-slate-100 text-slate-600 group-hover:bg-slate-600 group-hover:text-white', action: () => {} },
+          { icon: <FileText className="w-8 h-8" />, label: 'Reports', desc: 'View completion reports', color: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white', action: () => setTab('reports') },
+          { icon: <Target className="w-8 h-8" />, label: 'Shared Goals', desc: 'Manage strategic KPIs', color: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white', action: () => setTab('shared_goals') },
+          { icon: <Database className="w-8 h-8" />, label: 'Audit Logs', desc: 'Track system changes', color: 'bg-slate-100 text-slate-600 group-hover:bg-slate-600 group-hover:text-white', action: () => setTab('logs') },
         ].map(item => (
           <div key={item.label}
             onClick={item.action}
@@ -136,14 +161,24 @@ const AdminDashboard = () => {
 
       {/* Tabs */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="border-b border-slate-100 flex">
-          {(['users', 'cycles'] as const).map(t => (
+        <div className="border-b border-slate-100 flex flex-wrap">
+          {(['users', 'cycles', 'reports', 'logs', 'shared_goals'] as const).map(t => (
             <button key={t}
-              onClick={() => setTab(t)}
+              onClick={() => setTab(t as any)}
               className={`px-6 py-4 text-sm font-semibold capitalize transition-colors ${tab === t ? 'text-brand-600 border-b-2 border-brand-600 bg-brand-50/50' : 'text-slate-500 hover:text-slate-700'}`}>
-              {t === 'users' ? <><Users className="w-4 h-4 inline mr-1.5" />Users</> : <><Calendar className="w-4 h-4 inline mr-1.5" />Cycles</>}
+              {t === 'users' ? <><Users className="w-4 h-4 inline mr-1.5" />Users</> : 
+               t === 'cycles' ? <><Calendar className="w-4 h-4 inline mr-1.5" />Cycles</> :
+               t === 'reports' ? <><FileText className="w-4 h-4 inline mr-1.5" />Reports</> :
+               t === 'shared_goals' ? <><Target className="w-4 h-4 inline mr-1.5" />Shared Goals</> :
+               <><Database className="w-4 h-4 inline mr-1.5" />Logs</>}
             </button>
           ))}
+          {tab === 'users' && (
+            <div className="ml-auto flex items-center gap-2 mr-4 my-2">
+              <button onClick={() => setUserView('list')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${userView === 'list' ? 'bg-brand-100 text-brand-700' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>List View</button>
+              <button onClick={() => setUserView('tree')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${userView === 'tree' ? 'bg-brand-100 text-brand-700' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>Hierarchy Tree</button>
+            </div>
+          )}
           {tab === 'cycles' && (
             <button
               onClick={() => setShowAddCycle(true)}
@@ -158,8 +193,16 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
           </div>
+        ) : tab === 'reports' ? (
+          <AdminReportsView />
+        ) : tab === 'shared_goals' ? (
+          <AdminSharedGoalsView cycleId={activeCycleId} />
+        ) : tab === 'logs' ? (
+          <AdminLogsView />
         ) : tab === 'users' ? (
-          users.length === 0 ? (
+          userView === 'tree' ? (
+            <AdminHierarchyView />
+          ) : users.length === 0 ? (
             <div className="p-12 text-center text-slate-500">
               <Users className="w-10 h-10 mx-auto mb-3 text-slate-300" />
               <p>No users found.</p>
@@ -172,6 +215,7 @@ const AdminDashboard = () => {
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">User</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Code</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Role</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Manager</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Toggle</th>
                   </tr>
@@ -199,6 +243,18 @@ const AdminDashboard = () => {
                             <option value="admin">admin</option>
                           </select>
                         )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={u.manager_id || ''}
+                          onChange={e => changeManager(u.id, e.target.value)}
+                          className="px-2 py-1.5 rounded-lg text-xs font-medium border border-slate-200 outline-none cursor-pointer w-full max-w-[150px]"
+                        >
+                          <option value="">No Manager</option>
+                          {users.filter(m => (m.role === 'manager' || m.role === 'admin') && m.id !== u.id).map(m => (
+                            <option key={m.id} value={m.id}>{m.full_name}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${u.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
@@ -232,6 +288,7 @@ const AdminDashboard = () => {
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Cycle</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Dates</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Windows</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Change Status</th>
                   </tr>
                 </thead>
@@ -246,6 +303,12 @@ const AdminDashboard = () => {
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${cycleStatusColors[c.status] || 'bg-slate-100 text-slate-600'}`}>
                           {c.status.toUpperCase()}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button onClick={() => setWindowModalCycle({id: c.id, name: c.name})}
+                          className="text-xs font-semibold text-brand-600 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition-colors">
+                          Configure Windows
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <select
@@ -307,6 +370,24 @@ const AdminDashboard = () => {
             </form>
           </div>
         </div>
+      )}
+      {/* Shared Goal Modal */}
+      {showSharedGoalModal && (
+        <SharedGoalModal 
+          cycleId={activeCycleId} 
+          onClose={() => setShowSharedGoalModal(false)}
+          onSuccess={() => {
+            setShowSharedGoalModal(false);
+            // Optionally refresh something
+          }}
+        />
+      )}
+      {windowModalCycle && (
+        <CycleWindowsModal
+          cycleId={windowModalCycle.id}
+          cycleName={windowModalCycle.name}
+          onClose={() => setWindowModalCycle(null)}
+        />
       )}
     </div>
   );

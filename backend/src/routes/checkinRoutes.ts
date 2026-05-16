@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMyCheckin, saveMyCheckin, submitMyCheckin, getTeamCheckins } from '../controllers/checkinController';
+import { getMyCheckin, saveMyCheckin, submitMyCheckin, getTeamCheckins, getCheckinById, managerReviewCheckin } from '../controllers/checkinController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { roleGuard } from '../middleware/roleGuard';
 
@@ -14,5 +14,7 @@ router.patch('/:id/submit', roleGuard(['employee', 'manager', 'admin']), submitM
 
 // Manager routes
 router.get('/team/:cycleId/:quarter', roleGuard(['manager', 'admin']), getTeamCheckins);
+router.get('/:id', roleGuard(['manager', 'admin']), getCheckinById);
+router.patch('/:id/review', roleGuard(['manager', 'admin']), managerReviewCheckin);
 
 export default router;

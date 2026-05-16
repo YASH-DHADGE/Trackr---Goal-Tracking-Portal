@@ -8,7 +8,15 @@ export const windowGuard = (requiredWindowType: 'goal_setting' | 'q1' | 'q2' | '
     if (req.user?.role === 'admin') return next();
 
     try {
-      const cycleId = req.params.cycleId || req.body.cycleId;
+      let cycleId = req.params.cycleId || req.body.cycleId;
+
+      // If cycleId is missing but we have a sheet ID (req.params.id), look it up
+      if (!cycleId && req.params.id) {
+        const sheetResult = await query('SELECT cycle_id FROM goal_sheets WHERE id = $1', [req.params.id]);
+        if (sheetResult.rows.length > 0) {
+          cycleId = sheetResult.rows[0].cycle_id;
+        }
+      }
 
       if (!cycleId) {
         return res.status(400).json({ error: 'cycleId is required to check window status' });

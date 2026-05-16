@@ -11,7 +11,12 @@ export const pool = new Pool({
   }
 });
 
-// A helper for querying the DB
+// A helper for querying the DB (one-off queries)
 export const query = (text: string, params?: any[]) => {
   return pool.query(text, params);
+};
+
+// A helper for transactions (manual client checkout)
+export const getClient = () => {
+  return pool.connect();
 };
