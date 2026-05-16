@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Target, Lock, Mail } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
 import apiClient from '../api/client';
 
 const Login = () => {
@@ -45,9 +45,8 @@ const Login = () => {
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full glass rounded-3xl p-8 shadow-2xl border border-white/50">
         <div className="flex justify-center mb-8">
-          <div className="bg-gradient-to-br from-brand-400 to-brand-600 p-4 rounded-2xl shadow-lg">
-            <Target className="w-10 h-10 text-white" />
-          </div>
+          <img src="/logo.png" alt="Trackr Logo" className="w-20 h-20 object-contain drop-shadow-lg" />
+
         </div>
         <h2 className="text-3xl font-bold text-center text-slate-800 mb-2">Welcome Back</h2>
         <p className="text-center text-slate-500 mb-6">Sign in to your Trackr portal</p>
