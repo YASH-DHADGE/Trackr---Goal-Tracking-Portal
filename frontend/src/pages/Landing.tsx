@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Target, TrendingUp, Shield, Users, ArrowRight, Zap, BarChart3, Globe } from 'lucide-react';
+import { Shield, Users, ArrowRight, Zap, BarChart3, Sparkles, Bell, Clock } from 'lucide-react';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -104,34 +104,34 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { 
-                icon: <Target className="w-8 h-8 text-brand-600" />, 
-                title: 'Strategic Alignment', 
-                desc: 'Cascade goals from leadership to individual contributors with zero friction.' 
+                icon: <Sparkles className="w-8 h-8 text-brand-600" />, 
+                title: 'Trackr AI Companion', 
+                desc: 'An intelligent dual-engine chat assistant (Mistral Large + offline NLP) providing instant, contextual insights into your goals, progress, and review rules.' 
               },
               { 
                 icon: <BarChart3 className="w-8 h-8 text-indigo-600" />, 
-                title: 'Real-time Analytics', 
-                desc: 'Visual progress tracking with automated dashboards and reporting.' 
+                title: 'Performance Insights', 
+                desc: 'Visual analytics dashboards showing departmental check-in completion heatmaps, goal distributions by thrust area, and L1 manager review effectiveness.' 
               },
               { 
-                icon: <Users className="w-8 h-8 text-emerald-600" />, 
-                title: 'Team Collaboration', 
-                desc: 'Built-in check-ins and feedback loops to keep everyone moving forward.' 
+                icon: <Clock className="w-8 h-8 text-emerald-600" />, 
+                title: 'Smart Escalations', 
+                desc: 'Nightly cron-scheduled batches monitor delays and automatically trigger multi-stage L1/L2/L3 alerts to keep goal completion on track.' 
               },
               { 
-                icon: <Shield className="w-8 h-8 text-purple-600" />, 
-                title: 'Enterprise Security', 
-                desc: 'Role-based access control and comprehensive audit logging for peace of mind.' 
+                icon: <Bell className="w-8 h-8 text-purple-600" />, 
+                title: 'Action Alerts', 
+                desc: 'A sleek in-app notification center dropdown paired with transactional SMTP emails keeps employees and managers alerted on all workflow states.' 
               },
               { 
-                icon: <TrendingUp className="w-8 h-8 text-amber-600" />, 
-                title: 'Growth Focused', 
-                desc: 'Historical performance tracking to identify and nurture top talent.' 
+                icon: <Users className="w-8 h-8 text-amber-600" />, 
+                title: 'Shared KPI Propagation', 
+                desc: 'Assign departmental KPIs to multiple employee sheets seamlessly with read-only target validation and real-time primary-owner progress synchronization.' 
               },
               { 
-                icon: <Globe className="w-8 h-8 text-teal-600" />, 
-                title: 'Hybrid Ready', 
-                desc: 'Designed for the modern distributed workforce with cloud-first architecture.' 
+                icon: <Shield className="w-8 h-8 text-teal-600" />, 
+                title: 'Governance & Audit Trails', 
+                desc: 'Role-based access controls, admin exception-handling unlocking, and full before-after database audit logs for complete accountability.' 
               }
             ].map((f, i) => (
               <div key={i} className="group p-8 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 hover:border-brand-500 dark:hover:border-brand-500 transition-all duration-300">

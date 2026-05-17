@@ -42,10 +42,10 @@ The system uses a **three-tier architecture** with a React SPA as the client lay
 |  |   Service    |  |   Service    |  |   Service            |   |
 |  +--------------+  +--------------+  +----------------------+   |
 |                                                                  |
-|  +--------------+  +--------------+                             |
-|  | Notification |  |  Escalation  |   (Bonus features)         |
-|  |  Worker      |  |  Job (Cron)  |                             |
-|  +--------------+  +--------------+                             |
+|  +--------------+  +--------------+  +----------------------+   |
+|  | Notification |  |  Escalation  |  |  Trackr AI Chatbot   |   |
+|  |  Worker      |  |  Job (Cron)  |  |  Engine (Mistral/NLP)|   |
+|  +--------------+  +--------------+  +----------------------+   |
 +------------------------------+-----------------------------------+
                                | SQL over TLS (pg driver)
                                v
@@ -154,9 +154,10 @@ src/
 │   ├── checkins/
 │   ├── reports/
 │   ├── audit/
-│   ├── notifications/  (bonus)
-│   └── escalations/    (bonus)
-├── jobs/            # Cron jobs: windowActivation, escalationCheck
+│   ├── notifications/  # Notification dropdown & email service
+│   ├── escalations/    # Multi-stage compliance delay tracker
+│   └── chatbot/        # Dual-engine AI dialogue pipeline
+├── jobs/            # Cron jobs: checkDeadlines (escalationCheck)
 ├── utils/           # scoreComputer, auditWriter, reportBuilder
 └── types/           # Shared TypeScript types and Zod schemas
 ```
@@ -251,6 +252,26 @@ Request
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/api/audit` | Admin | Query audit log with filters |
+
+#### AI Chatbot
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| POST | `/api/chatbot` | Any | Converse with the Trackr AI Assistant (Mistral/NLP) |
+
+#### Notifications
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/api/notifications` | Any | Fetch user notifications (limit 50, sorted by date) |
+| PATCH | `/api/notifications/:id/read` | Any | Mark a single notification as read |
+| POST | `/api/notifications/read-all` | Any | Mark all unread notifications as read |
+
+#### Escalations
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/api/admin/escalations` | Admin | View escalations compliance and delay tracker logs |
 
 ---
 
@@ -439,12 +460,9 @@ User submits email + password
 
 | Job | Schedule | Action |
 |---|---|---|
-| `activateWindows` | Every hour | Check `cycle_windows.opens_at`, set `is_active = TRUE` |
-| `closeWindows` | Every hour | Check `cycle_windows.closes_at`, set `is_active = FALSE` |
-| `checkinReminder` | Daily 9 AM | Notify employees who haven't submitted in active window |
-| `escalationCheck` | Daily 10 AM | Check N-day escalation conditions, create `escalations` rows |
+| `checkDeadlines` | Daily 12 AM (`0 0 * * *`) | Scans missed submissions, delayed approvals, and pending check-ins; triggers escalations (L1/L2/L3) and logs events |
 
-All jobs run inside the Express process using `node-cron`. For production these would move to a separate worker service.
+All jobs are run inside the Express process using the `node-cron` package. In production, these run as background worker processes.
 
 ---
 
@@ -524,27 +542,26 @@ All jobs run inside the Express process using `node-cron`. For production these 
 | Backend | Node.js + Express + TypeScript | Render / Railway |
 | Database | Supabase PostgreSQL 15 | Supabase |
 | Auth | Supabase Auth + JWT | Supabase |
-| File Storage | Supabase Storage | Supabase |
-| Cron Jobs | node-cron (in-process) | Same as backend |
-| Email (Bonus) | Resend / Nodemailer | External SMTP |
-| Teams (Bonus) | MS Bot Framework or Webhooks | External |
+| AI Chatbot | Mistral Large (`mistral-large-latest`) + Local NLP fallback | Express backend |
+| Cron Jobs | `node-cron` (nightly batch execution) | Same as backend |
+| Email Service | Nodemailer via corporate SMTP | SMTP server |
 | CI/CD | GitHub Actions | GitHub |
 
 ---
 
 ## 9. Hackathon Build Priority Order
 
-| Phase | Features | Est. Time |
-|---|---|---|
-| 1 | Supabase setup, DB schema, Supabase Auth + JWT | 2-3 hrs |
-| 2 | User roles, org hierarchy, cycle + window config | 2 hrs |
-| 3 | Goal sheet CRUD + validation rules (weightage, count) | 3 hrs |
-| 4 | Submission + Manager approval + locking | 3 hrs |
-| 5 | Quarterly check-ins + progress score computation | 3 hrs |
-| 6 | Shared goals + fan-out sync | 2 hrs |
-| 7 | Audit trail + admin unlock | 1-2 hrs |
-| 8 | Reports (achievement + completion dashboard) + CSV export | 2 hrs |
-| 9 | Polish UI: role dashboards, validation UX, status badges | 2-3 hrs |
-| 10 | Bonus: Notifications / Analytics / Escalations | If time permits |
+| Phase | Features | Est. Time | Status |
+|---|---|---|---|
+| 1 | Supabase setup, DB schema, Supabase Auth + JWT | 2-3 hrs | ✅ Completed |
+| 2 | User roles, org hierarchy, cycle + window config | 2 hrs | ✅ Completed |
+| 3 | Goal sheet CRUD + validation rules (weightage, count) | 3 hrs | ✅ Completed |
+| 4 | Submission + Manager approval + locking | 3 hrs | ✅ Completed |
+| 5 | Quarterly check-ins + progress score computation | 3 hrs | ✅ Completed |
+| 6 | Shared goals + fan-out sync | 2 hrs | ✅ Completed |
+| 7 | Audit trail + admin unlock | 1-2 hrs | ✅ Completed |
+| 8 | Reports (achievement + completion dashboard) + CSV export | 2 hrs | ✅ Completed |
+| 9 | Polish UI: role dashboards, validation UX, status badges | 2-3 hrs | ✅ Completed |
+| 10 | Production Polish: AI Chatbot, Live Notifications dropdown, Cron Escalation, Advanced Analytics | 3-4 hrs | ✅ Completed |
 
-**Core MVP (Phases 1-9) is achievable in approximately 24-25 hours of focused development.**
+**All MVP and production phases are fully completed, thoroughly tested, and integrated successfully!**

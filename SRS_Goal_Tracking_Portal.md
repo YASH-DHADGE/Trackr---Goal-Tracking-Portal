@@ -210,35 +210,69 @@ The portal is a standalone web application integrated with Supabase as the manag
 
 ---
 
-### 3.9 Notifications (Bonus)
+### 3.9 In-App Notifications & Alert Center
 
-**FR-NOTIF-01 (Bonus):** The system shall send automated email notifications for: goal submission, manager approval, manager rejection, and quarterly check-in reminders.
+**FR-NOTIF-01:** The system shall support an in-app, real-time notification alert center:
+- Accessible via a modern glassmorphic header dropdown.
+- Featuring dynamic unread count badges and real-time state synchronization.
+- Direct deep links linking users to specific goal sheets or quarterly check-ins.
+- Quick action to "Mark as Read" or "Mark All as Read", persisted in PostgreSQL.
 
-**FR-NOTIF-02 (Bonus):** Microsoft Teams bot or adaptive card notifications shall alert managers when a team member submits or updates a goal sheet.
-
-**FR-NOTIF-03 (Bonus):** Notifications shall include deep links directly to the relevant goal sheet or check-in view.
-
----
-
-### 3.10 Escalation Module (Bonus)
-
-**FR-ESC-01 (Bonus):** Configurable escalation rules shall trigger notifications based on: employee not submitting goals within N days of cycle open; manager not approving within N days of submission; check-in not completed within the active window.
-
-**FR-ESC-02 (Bonus):** Escalation chain: employee → manager → skip-level/HR after defined intervals.
-
-**FR-ESC-03 (Bonus):** All escalation events shall be visible in an escalation log accessible to Admin/HR.
+**FR-NOTIF-02:** The system shall send automated transactional emails via SMTP (Nodemailer) on key goal sheet events:
+- **Goal Submission**: Alerts L1 Managers of pending employee goal sheets.
+- **Goal Approval**: Alerts employees that their goal sheet has been approved and locked.
+- **Rework Request**: Alerts employees of rework comments and pending actions.
+- **Check-in Reminders**: Periodic automated alerts to employees and managers during open windows.
 
 ---
 
-### 3.11 Analytics Module (Bonus)
+### 3.10 Automated Escalation Engine
 
-**FR-ANALYTICS-01 (Bonus):** Quarter-on-Quarter goal achievement trends shall be available at individual, team, and department levels.
+**FR-ESC-01:** The system shall feature an automated multi-stage escalation engine triggered by a nightly node-cron scheduler at `0 0 * * *`:
+- **Goal Not Submitted**: Targets active employees who have not submitted a goal sheet after the goal-setting window closes.
+- **Approval Not Done**: Targets direct managers who have pending employee submissions after the window closes.
+- **Check-in Not Completed**: Targets employees whose quarterly check-in status is not `submitted` after the check-in window closes.
 
-**FR-ANALYTICS-02 (Bonus):** Heatmaps or progress charts shall show completion rates across the organization.
+**FR-ESC-02:** The system shall enforce a strict 3-tier escalation chain based on the delay duration:
+- **Level 1 (Days Overdue >= 1)**: Immediate automated email reminder sent directly to the target user, generating an active log in `escalations`.
+- **Level 2 (Days Overdue >= 3)**: Escalation warning email dispatched directly to the target user's reporting L1 Manager.
+- **Level 3 (Days Overdue >= 7)**: Severe escalation warning email dispatched to all active system Administrators and HR managers.
 
-**FR-ANALYTICS-03 (Bonus):** Goal distribution analysis shall break down goals by Thrust Area, UoM type, and status.
+**FR-ESC-03:** All active and resolved escalation events shall be tracked in a central database log accessible to Admin/HR for compliance monitoring.
 
-**FR-ANALYTICS-04 (Bonus):** A manager effectiveness dashboard shall compare check-in completion rates across all L1 managers.
+---
+
+### 3.11 Organizational Analytics Dashboard
+
+**FR-ANALYTICS-01:** The system shall expose specialized reporting and visualization endpoints for administrators and managers under `/api/admin/analytics`:
+- **Goal Distribution Analysis**: Breaks down organizational goals by Thrust Area, status (`draft`, `approved`, `rework_requested`), and UoM type.
+- **Completion Rates Heatmap**: Grouped high-level visual charts showing check-in completion percentages across all departments.
+- **Manager Effectiveness comparison**: Comparative charts outlining check-in and goal-approval completion rates across all reporting L1 managers.
+- **Quarter-on-Quarter (QoQ) Trends**: Visual indicators illustrating achievement progress score increments across Q1 through Q4 cycles.
+
+---
+
+### 3.12 AI Portal Companion (Trackr AI Chatbot)
+
+**FR-CHATBOT-01:** The system shall integrate an AI Assistant Chatbot ("Trackr AI") in the frontend workspace, accessible via an interactive glassmorphic floating drawer panel.
+
+**FR-CHATBOT-02:** The chatbot backend shall implement a secure **dual-engine pipeline**:
+- **Mistral Large LLM Engine**: Queries the secure Mistral AI API (`mistral-large-latest`) with session-specific prompt templates to return highly contextual, conversational guidance.
+- **Intelligent Local NLP Fallback Engine**: If the API key is missing or the external API call fails, the chatbot falls back seamlessly to an offline NLP parsing engine.
+
+**FR-CHATBOT-03:** The chatbot shall have secure, read-only access to the logged-in user's active session state:
+- User profile (name, role, department, employee code, designation).
+- Reporting structure (direct L1 manager name and contact details).
+- Active review cycle, goal sheet status, and manager rework comments.
+- Individual goal parameters (thrust areas, targets, weightages, locking states).
+- Quarterly progress entries (recorded achievements, computed scores, and remarks).
+
+**FR-CHATBOT-04:** The chatbot shall respond intelligently to context-specific queries:
+- *"Show my goals"* -> Outputs goals cleanly formatted in markdown.
+- *"What is my progress?"* -> Calculates and outputs the overall weighted progress score along with a visual text progress bar (e.g. `[████░░░░░░] 40%`).
+- *"Check-in status"* -> Outlines employee and manager completion state across Q1-Q4.
+- *"Who is my manager?"* -> Details manager profile and corporate designation.
+- *"What are the portal rules?"* -> Summarizes validation constraints (10% min weight, 100% total weight, max 8 goals, and admin unlocking policies).
 
 ---
 

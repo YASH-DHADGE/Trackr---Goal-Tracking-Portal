@@ -57,8 +57,7 @@ Trackr uses a modern, scalable **MERN + Supabase** architecture:
 - **Backend**: Node.js + Express + TypeScript + Zod validation.
 - **Data**: Supabase (PostgreSQL 15) for persistence and authentication.
 
-![Trackr Architecture Diagram](docs/architecture.png)
-
+![alt text](image.png)
 *For more details, see the [System Architecture Documentation](System_Architecture_Goal_Tracking_Portal.md).*
 
 ---

@@ -417,17 +417,20 @@ CREATE TABLE notifications (
   body              TEXT,
   deep_link         VARCHAR(500),
   status            notification_status NOT NULL DEFAULT 'pending',
+  is_read           BOOLEAN NOT NULL DEFAULT FALSE,
+  read_at           TIMESTAMPTZ,
   sent_at           TIMESTAMPTZ,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_notifications_recipient ON notifications(recipient_id, status);
+CREATE INDEX idx_notifications_recipient_unread ON notifications(recipient_id) WHERE is_read = FALSE;
 ```
 
 ---
 
-### 3.16 escalations (Bonus)
-Rule-based escalation tracking for bonus feature.
+### 3.16 escalations
+Rule-based escalation tracking for automated deadline reminders and governance.
 
 ```sql
 CREATE TYPE escalation_trigger AS ENUM (
@@ -445,6 +448,9 @@ CREATE TABLE escalations (
   quarter          quarter_type,
   escalation_level SMALLINT NOT NULL DEFAULT 1,  -- 1 = employee, 2 = manager, 3 = HR
   status           escalation_status NOT NULL DEFAULT 'open',
+  notified_at      TIMESTAMPTZ DEFAULT NOW(),
+  days_overdue     INTEGER NOT NULL DEFAULT 0,
+  notes            TEXT,
   resolved_at      TIMESTAMPTZ,
   resolved_by      UUID REFERENCES users(id),
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
