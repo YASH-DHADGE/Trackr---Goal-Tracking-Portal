@@ -15,7 +15,7 @@ export default function AdminAnalyticsView({ cycleId }: { cycleId: string }) {
   useEffect(() => {
     if (!cycleId) return;
     setLoading(true);
-    
+
     Promise.all([
       apiClient.get(`/admin/analytics/summary?cycleId=${cycleId}`),
       apiClient.get(`/admin/analytics/planned-vs-actual?cycleId=${cycleId}`),
@@ -90,11 +90,11 @@ export default function AdminAnalyticsView({ cycleId }: { cycleId: string }) {
             <svg width="180" height="180" viewBox="0 0 42 42" className="drop-shadow-sm rotate-[-90deg]">
               <circle cx="21" cy="21" r={radius} fill="transparent" stroke="currentColor" className="text-slate-100 dark:text-slate-800" strokeWidth="5" />
               <circle cx="21" cy="21" r={radius} fill="transparent" stroke="#94a3b8" strokeWidth="5"
-                strokeDasharray={`${(summary.draftSheets/totalSheets)*100} 100`} strokeDashoffset="0" />
+                strokeDasharray={`${(summary.draftSheets / totalSheets) * 100} 100`} strokeDashoffset="0" />
               <circle cx="21" cy="21" r={radius} fill="transparent" stroke="#3b82f6" strokeWidth="5"
-                strokeDasharray={`${(summary.submittedSheets/totalSheets)*100} 100`} strokeDashoffset={`${-((summary.draftSheets/totalSheets)*100)}`} />
+                strokeDasharray={`${(summary.submittedSheets / totalSheets) * 100} 100`} strokeDashoffset={`${-((summary.draftSheets / totalSheets) * 100)}`} />
               <circle cx="21" cy="21" r={radius} fill="transparent" stroke="#10b981" strokeWidth="5"
-                strokeDasharray={`${(summary.approvedSheets/totalSheets)*100} 100`} strokeDashoffset={`${-((summary.draftSheets/totalSheets)*100) - ((summary.submittedSheets/totalSheets)*100)}`} />
+                strokeDasharray={`${(summary.approvedSheets / totalSheets) * 100} 100`} strokeDashoffset={`${-((summary.draftSheets / totalSheets) * 100) - ((summary.submittedSheets / totalSheets) * 100)}`} />
             </svg>
             <div className="w-full mt-10 space-y-3">
               <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider">

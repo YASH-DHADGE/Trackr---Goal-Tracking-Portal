@@ -2,6 +2,7 @@ import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import { LogOut, LayoutDashboard, Users, Shield, ChevronRight, Menu, X, Moon, Sun, User, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Chatbot } from '../components/Chatbot';
+import { NotificationDropdown } from '../components/NotificationDropdown';
 
 interface NavItem {
   to: string;
@@ -86,6 +87,8 @@ const MainLayout = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <NotificationDropdown />
+
           <button
             onClick={toggleDarkMode}
             className="p-2.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800 rounded-xl transition-all"

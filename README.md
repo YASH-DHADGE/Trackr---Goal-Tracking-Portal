@@ -28,6 +28,25 @@ Trackr is a comprehensive **In-House Goal Setting & Tracking Portal** designed f
 - **Audit Trails**: Complete transparency with detailed logging for every modification to locked goal sheets.
 - **Analytics & Reporting**: Export comprehensive achievement and completion reports to CSV/Excel.
 
+### 🤖 Trackr AI Assistant (Chatbot)
+- **Live Context Querying**: Securely queries the active database to retrieve personalized profile details, manager reporting hierarchy, goal statuses, and quarterly check-ins.
+- **Dynamic Progress Calculations**: Computes real-time weighted progress scores and visualizes them with inline progress bars directly in the conversation.
+- **Rule Verification**: Guides users on organizational goal-setting constraints (e.g., maximum of 8 goals, minimum 10% weightage, and cycle lock/unlock mechanics).
+- **Dual-Engine Pipeline**: Leverages the **Mistral AI Large API** for state-of-the-art conversational experiences with a robust, intelligent **Local NLP Agent fallback** for offline/dev environments.
+- **Premium Glassmorphism UI**: Beautiful, interactive drawer widget with dynamic suggestion chips, smooth scroll animations, history clearing capabilities, and full light/dark theme synchronization.
+
+### ✉️ Email Notifications (Nodemailer)
+- **Action-Triggered Dispatches**: Sends automated emails for critical system actions, including Goal Submission, Goal Approval, and Goal Rework comments.
+- **Automated Check-in Reminders**: Dynamic quarterly performance check-in templates notify team members automatically as review cycles approach deadlines.
+- **Fail-Safe Mechanism**: Non-blocking dispatches ensure that SMTP server hiccups or connection timeouts do not impact user request execution.
+- **Responsive HTML Branding**: Custom, responsive HTML templates containing direct call-to-action link buttons.
+
+### 🔔 Real-Time In-App Alerts
+- **Top Nav Dropdown**: Premium glassmorphism dropdown widget with glowing indicator dots and unread badge counters.
+- **Persistent Supabase Schema**: Automatically populates database logs with unread states, titles, body descriptions, and action deep-links.
+- **Dynamic Icon Mapping**: Custom contextual icons mapping visually to approved, rework, submission, and reminder alert states.
+- **Deep Linking Navigation**: Seamless single-click routing using React Router, automatically navigating users directly to the relevant goal sheets or review dashboards.
+
 ---
 
 ## 🏗️ Architecture
@@ -52,6 +71,8 @@ Trackr uses a modern, scalable **MERN + Supabase** architecture:
 - **API Runtime**: [Node.js](https://nodejs.org/) & [Express](https://expressjs.com/)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Database**: [PostgreSQL 15](https://www.postgresql.org/) (via [Supabase](https://supabase.com/))
+- **Email Delivery**: [Nodemailer](https://nodemailer.com/) *(with fail-safe non-blocking handlers)*
+- **AI Capabilities**: [Mistral AI API](https://mistral.ai/) *(with smart local fallback NLP agent)*
 - **Documentation**: [Swagger / OpenAPI](https://swagger.io/)
 
 ---
@@ -83,6 +104,17 @@ Trackr uses a modern, scalable **MERN + Supabase** architecture:
    PORT=3001
    DATABASE_URL=your_supabase_postgresql_connection_string
    JWT_SECRET=your_jwt_secret
+   MISTRAL_API_KEY=your_mistral_api_key_here # Optional: For advanced AI chatbot capabilities
+   
+   # Nodemailer SMTP Configuration
+   SMTP_HOST=your_smtp_host
+   SMTP_PORT=your_smtp_port
+   SMTP_USER=your_smtp_username
+   SMTP_PASS=your_smtp_password
+   
+   # Deep Linking & Webhooks
+   FRONTEND_URL=http://localhost:5173
+   TEAMS_WEBHOOK_URL=your_teams_webhook_url # Optional: For Microsoft Teams cards
    ```
 
 4. **Database Migration**
