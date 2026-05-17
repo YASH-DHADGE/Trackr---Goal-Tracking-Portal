@@ -4,7 +4,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
+import cron from 'node-cron';
 import { swaggerSpec } from './config/swagger';
+import { checkDeadlines } from './jobs/check-deadlines';
 
 // Routes
 import cycleRoutes from './routes/cycleRoutes';
@@ -43,5 +45,13 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/shared-goals', sharedGoalRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Schedule night batch jobs
+if (process.env.NODE_ENV !== 'test') {
+  cron.schedule('0 0 * * *', () => {
+    console.log('Running scheduled deadline check...');
+    checkDeadlines();
+  });
+}
 
 export default app;

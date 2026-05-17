@@ -277,3 +277,73 @@ export const getPlannedVsActual = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Server error fetching planned vs actual data' });
   }
 };
+
+export const getGoalDistribution = async (req: AuthRequest, res: Response) => {
+  const { cycleId } = req.query;
+  if (!cycleId) return res.status(400).json({ error: 'cycleId is required' });
+
+  try {
+    const result = await query(`
+      SELECT thrust_area, uom_type,
+             COUNT(g.id) as goal_count,
+             AVG(gpe.computed_progress_score) as avg_score
+      FROM goals g
+      JOIN goal_sheets gs ON g.goal_sheet_id = gs.id
+      LEFT JOIN goal_progress_entries gpe ON g.id = gpe.goal_id
+      WHERE gs.cycle_id = $1
+      GROUP BY thrust_area, uom_type
+      ORDER BY thrust_area
+    `, [cycleId]);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error fetching goal distribution' });
+  }
+};
+
+export const getTeamQoQTrends = async (req: AuthRequest, res: Response) => {
+  const { cycleId } = req.query;
+  if (!cycleId) return res.status(400).json({ error: 'cycleId is required' });
+
+  try {
+    const result = await query(`
+      SELECT d.name as department, qc.quarter,
+             AVG(gpe.computed_progress_score) as avg_score,
+             COUNT(DISTINCT u.id) as employee_count
+      FROM quarterly_checkins qc
+      JOIN users u ON qc.employee_id = u.id
+      JOIN departments d ON u.department_id = d.id
+      JOIN goal_progress_entries gpe ON qc.id = gpe.checkin_id
+      WHERE qc.cycle_id = $1 AND gpe.computed_progress_score IS NOT NULL
+      GROUP BY d.name, qc.quarter
+      ORDER BY d.name, qc.quarter
+    `, [cycleId]);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error fetching QoQ trends' });
+  }
+};
+
+export const getManagerEffectiveness = async (req: AuthRequest, res: Response) => {
+  const { cycleId } = req.query;
+  if (!cycleId) return res.status(400).json({ error: 'cycleId is required' });
+
+  try {
+    const result = await query(`
+      SELECT m.id, m.full_name as manager_name,
+             COUNT(DISTINCT ur.employee_id) as team_size,
+             COUNT(DISTINCT qc.id) FILTER (WHERE qc.manager_status = 'completed') as reviewed_checkins,
+             COUNT(DISTINCT qc.id) as total_checkins,
+             AVG(gpe.computed_progress_score) as avg_team_score
+      FROM users m
+      JOIN user_reporting ur ON m.id = ur.manager_id AND ur.is_active = TRUE
+      LEFT JOIN quarterly_checkins qc ON ur.employee_id = qc.employee_id AND qc.cycle_id = $1
+      LEFT JOIN goal_progress_entries gpe ON qc.id = gpe.checkin_id
+      WHERE m.role = 'manager'
+      GROUP BY m.id, m.full_name
+      ORDER BY avg_team_score DESC NULLS LAST
+    `, [cycleId]);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error fetching manager effectiveness' });
+  }
+};
