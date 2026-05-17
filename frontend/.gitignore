@@ -10,6 +10,11 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+
+# Environment variables — keep .env.production tracked, ignore local overrides
+.env
+.env.local
+.env.*.local
 *.local
 
 # Editor directories and files
