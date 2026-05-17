@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import { LogOut, LayoutDashboard, Users, Shield, ChevronRight, Menu, X, Moon, Sun, User, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Chatbot } from '../components/Chatbot';
 
 interface NavItem {
   to: string;
@@ -190,6 +191,9 @@ const MainLayout = () => {
           </div>
         </main>
       </div>
+      
+      {/* Trackr AI Assistant Chatbot */}
+      <Chatbot />
     </div>
   );
 };
